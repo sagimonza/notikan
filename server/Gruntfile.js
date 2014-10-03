@@ -1,22 +1,26 @@
 /*global module:false*/
-module.exports = function (grunt) {
+module.exports = function(grunt) {
+	// Project configuration.
 	grunt.initConfig({
-
-		// Metadata.
-		pkg			: grunt.file.readJSON('package.json'),
-
-		banner		: '/*! <%= pkg.title || pkg.name %> - v<%= pkg.version %> - ' +
-			'<%= grunt.template.today("yyyy-mm-dd") %>\n' +
-			'<%= pkg.homepage ? "* " + pkg.homepage + "\\n" : "" %>' +
-			'* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
-			' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %> */\n',
+		pkg: grunt.file.readJSON('package.json'),
+		uglify: {
+			options: {
+				banner		: '/*! <%= pkg.title || pkg.name %> - v<%= pkg.version %> - ' +
+					'<%= grunt.template.today("yyyy-mm-dd") %>\n' +
+					'<%= pkg.homepage ? "* " + pkg.homepage + "\\n" : "" %>' +
+					'* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
+					' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %> */\n'
+			},
+			build: {
+				src: '<%= pkg.main %>.js',
+				dest: 'build/<%= pkg.name %>.min.js'
+			}
+		}
 	});
 
-	// These plugins provide necessary tasks.
-	//grunt.loadNpmTasks('grunt-contrib-clean');
+	// Load the plugin that provides the "uglify" task.
+	grunt.loadNpmTasks('grunt-contrib-uglify');
 
-	var env = grunt.option('env') || 'production';
-
-	// Register tasks
-	//grunt.registerTask('test', ['connect', 'usetheforce_on', 'jasmine:all', 'usetheforce_restore']);
+	// Default task(s).
+	grunt.registerTask('default', ['uglify']);
 };

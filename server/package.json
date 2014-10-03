@@ -1,22 +1,25 @@
 {
-	"name"			: "notikan",
-	"version"		: "0.1.0",
-	"description"	: "Notify 'kan'",
-	"main"			: "./lib/server",
-	"dependencies"	: {
-		"express"		: ">=0.3.32"
-	},
-	"devDependencies": {
-		"grunt"			: "~0.4.2",
-		"connect"		: ">=3.1.0",
-		"serve-static"	: ">=1.4.0"
-	},
-	"engines"		: { "node" : ">=0.8.0" },
-	"repository"	: {
-		"type"	: "git",
-		"url"	: "git@github.com:sagimonza/notikan.git"
-	},
-	"author"		: "Notikan",
-	"readmeFilename": "README.md",
-	"license"		: "none"
+  "name": "notikan",
+  "version": "0.1.0",
+  "description": "Notify 'kan'",
+  "main": "./lib/server",
+  "dependencies": {
+    "express": ">=0.3.32"
+  },
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-contrib-nodeunit": "~0.4.1",
+    "grunt-contrib-uglify": "~0.5.0"
+  },
+  "engines": {
+    "node": ">=0.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:sagimonza/notikan.git"
+  },
+  "author": "Notikan",
+  "readmeFilename": "README.md",
+  "license": "none"
 }
