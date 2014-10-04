@@ -15,10 +15,10 @@ var gcmAPI = {
 			delayWhileIdle: true,
 			timeToLive: 100,
 			data: {
-				title: 'Notikan Title',
-				message: 'Notikan Message',
-				key1: 'message1',
-				key2: 'message2'
+				"title": "Notikan Title",
+				"message": "Notikan Message",
+				"key1": "message1",
+				"key2": "message2"
 			}
 		});
 
@@ -27,14 +27,14 @@ var gcmAPI = {
 
 		// OPTIONAL
 		// add new key-value in data object
-		message.addDataWithKeyValue('key3','message3');
-		message.addDataWithKeyValue('key4','message4');
+		//message.addDataWithKeyValue('key3','message3');
+		//message.addDataWithKeyValue('key4','message4');
 
 		// or add a data object
-		message.addDataWithObject({
-			key5: 'message5',
-			key6: 'message6'
-		});
+		//message.addDataWithObject({
+		//	key5: 'message5',
+		//	key6: 'message6'
+		//});
 
 		// At least one required
 		registrationIds.push('APA91bH-QOCPUx84i9MpCXENZSU1YFwrvn5Ry9S4OTRJ6HopdNDoHHOEIYUVK9c2-bqjMvD2EZ5iELBxZ3jQnHJjkbfMoKByLJfPpom1a9Z92_W0tNl1JkRQM5-CuSkRWQ4uPsOEPlBwVLBzSBq_YrEkPGGnJLSxOUpoues1wOeWO3XuenuI5bE');
