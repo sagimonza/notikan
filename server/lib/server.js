@@ -1,6 +1,6 @@
 
 var express = require('express');
-var gcm = require('./gcmAPI.js');
+var gcm = require('./gcm.js');
 
 var app = express();
 
