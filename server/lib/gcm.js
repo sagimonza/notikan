@@ -15,8 +15,8 @@ var gcmAPI = {
 			delayWhileIdle: true,
 			timeToLive: 100,
 			data: {
-				title: 'Notikan Title'
-				message : 'Notikan Message',
+				title: 'Notikan Title',
+				message: 'Notikan Message',
 				key1: 'message1',
 				key2: 'message2'
 			}
