@@ -4,7 +4,8 @@
   "description": "Notify 'kan'",
   "main": "./lib/server",
   "dependencies": {
-    "express": ">=0.3.32"
+    "express": ">=0.3.32",
+	"node-gcm": "~0.9.6"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
