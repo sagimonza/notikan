@@ -37,7 +37,7 @@ var gcmAPI = {
 		});
 
 		// At least one required
-		registrationIds.push('regId1');
+		registrationIds.push('APA91bH-QOCPUx84i9MpCXENZSU1YFwrvn5Ry9S4OTRJ6HopdNDoHHOEIYUVK9c2-bqjMvD2EZ5iELBxZ3jQnHJjkbfMoKByLJfPpom1a9Z92_W0tNl1JkRQM5-CuSkRWQ4uPsOEPlBwVLBzSBq_YrEkPGGnJLSxOUpoues1wOeWO3XuenuI5bE');
 
 		/**
 		 * Params: message-literal, registrationIds-array, No. of retries, callback-function
