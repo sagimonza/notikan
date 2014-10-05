@@ -12,7 +12,7 @@ function buildMongoUrl(host, port, name, user, password) {
 
 var databases = {
 	api : {
-		url : buildMongoUrl("ds043180.mongolab.com", 43180, "api", "sagi_admin"),
+		url : buildMongoUrl("ds043180.mongolab.com", 43180, "api", "sagi_admin", "monza2846"),
 		activeCounters : {},
 		active : null
 	}
