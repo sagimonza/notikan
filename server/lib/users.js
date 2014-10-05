@@ -117,6 +117,15 @@ var Users = {
 				"regId"				: regId
 			}, { "collapseKey" : "Verification Success" });
 	},
+
+	echo : function(regId, title, msg) {
+		GCM.notify([regId],
+			{	"message"			: msg,
+				"title"				: "ECHO: " + title,
+				"msgType"			: MessageTypes.MESSAGE,
+				"regId"				: regId
+			}, { "collapseKey" : "Echo Message" });
+	},
 	
 	notify : function(regId) {
 		

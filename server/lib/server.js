@@ -1,7 +1,7 @@
 
 var Express = require('express');
 var LoggerFactory = require('./logger.js')
-var DB = require('./db.js');
+var Users = require('./users.js');
 
 var logger = LoggerFactory.createLogger("server");
 var app = Express();
@@ -10,9 +10,12 @@ app.get('/', function(req, res){
 	res.send('hello world');
 });
 
-app.get('/notify', function(req, res){
-	Users.notify();
-	res.send("notification sent");
+app.get('/echo', function(req, res){
+	try { var bodyJSON = JSON.parse(req.body), regId = bodyJSON.regId, title = bodyJSON.title, msg = bodyJSON.message;
+	} catch(ex) { logger.error("exception:" + ex); }
+
+	Users.echo(regId, title, msg);
+	res.send("echo notification sent");
 });
 
 app.post('/register', function(req, res) {
