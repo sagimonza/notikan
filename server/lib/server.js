@@ -11,6 +11,7 @@ app.get('/', function(req, res){
 });
 
 app.get('/echo', function(req, res){
+	logger.debug("echo get call");
 	try { var bodyJSON = JSON.parse(req.body), regId = bodyJSON.regId, title = bodyJSON.title, msg = bodyJSON.message;
 	} catch(ex) { logger.error("exception:" + ex); }
 
@@ -19,6 +20,7 @@ app.get('/echo', function(req, res){
 });
 
 app.post('/register', function(req, res) {
+	logger.debug("register post call");
 	try { var regId = JSON.parse(req.body).regId;
 	} catch(ex) { logger.error("exception:" + ex); }
 	
@@ -27,12 +29,16 @@ app.post('/register', function(req, res) {
 		res.send("registration failed");
 		return;
 	}
-	
-	Users.register(regId);
+
 	res.send("registration started");
+
+	logger.debug("BEFORE trying to register user with regId=" + regId);
+	Users.register(regId);
+	logger.debug("AFTER trying to register user with regId=" + regId);
 });
 
 app.post('/verify', function(req, res) {
+	logger.debug("verify post call");
 	try { var bodyJSON = JSON.parse(req.body), regId = bodyJSON.regId, token = bodyJSON.token;
 	} catch(ex) { logger.error("exception:" + ex); }
 	
@@ -42,9 +48,11 @@ app.post('/verify', function(req, res) {
 		return;
 	}
 
-	Users.verify(regId, token);
 	res.send('verification started');
-});
 
+	logger.debug("BEFORE trying to verify user with regId=" + regId);
+	Users.verify(regId, token);
+	logger.debug("AFTER trying to verify user with regId=" + regId);
+});
 
 app.listen(8080);

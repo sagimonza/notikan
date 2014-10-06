@@ -24,7 +24,9 @@ function validateKey(dbKey) {
 	var dbObj = databases[dbKey];
 	if (!dbObj)
 		logger.error("no database with given key:" + dbKey);
-	
+
+	logger.debug("validate database key succeeded");
+
 	return dbObj;
 }
 
