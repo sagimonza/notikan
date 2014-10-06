@@ -109,7 +109,7 @@ var Users = {
 				return;
 			}
 			
-			if (user.token != token) {
+			if (user.verification_token != token) {
 				logger.error("verification failed - token mismatch");
 				return;
 			}
