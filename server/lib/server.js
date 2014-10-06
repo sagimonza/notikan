@@ -58,8 +58,8 @@ app.post('/verify', function(req, res) {
 });
 
 var options = {
-	key: fs.readFileSync('../keys/key.pem'),
-	cert: fs.readFileSync('../keys/cert.pem')
+	key: fs.readFileSync('./keys/key.pem'),
+	cert: fs.readFileSync('./keys/cert.pem')
 };
 
 https.createServer(options, app).listen(8443);
