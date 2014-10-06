@@ -1,12 +1,15 @@
 
 var https = require('https');
 var fs = require('fs');
-var Express = require('express');
-var LoggerFactory = require('./logger.js')
+var express = require('express');
+var bodyParser = require('body-parser');
+var LoggerFactory = require('./logger.js');
 var Users = require('./users.js');
 
 var logger = LoggerFactory.createLogger("server");
-var app = Express();
+var app = express();
+
+app.use(bodyParser.json());
 
 app.get('/', function(req, res){
 	res.send('hello world');
