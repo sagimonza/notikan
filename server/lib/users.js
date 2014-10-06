@@ -156,7 +156,7 @@ var Users = {
 	},
 
 	updateUser : function(regId, data, callback) {
-		Users.collection.updateUser({ _id : regId }, data, { w : 1 } , callback);
+		Users.collection.update({ _id : regId }, data, { w : 1 } , callback);
 	},
 
 	collection : null
