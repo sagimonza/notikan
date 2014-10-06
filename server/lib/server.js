@@ -58,6 +58,7 @@ app.post('/verify', function(req, res) {
 	logger.debug("AFTER trying to verify user with regId=" + regId);
 });
 
+// todo: sign real certificates, meanwhile: openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days XXX
 var options = {
 	key: fs.readFileSync('./keys/key.pem'),
 	cert: fs.readFileSync('./keys/cert.pem')
