@@ -65,8 +65,73 @@ var Users = {
 	},
 	
 	unregister : function() {
+
 	},
-	
+
+	askVerify : function(regId, token) {
+		logger.debug("asking to verify regId:" + regId);
+		GCM.notify([regId],
+			{	"message"			: "To verify this device please tap here",
+				"title"				: "Tap to verify",
+				"msgType"			: MessageTypes.VERIFICATION,
+				"regId"				: regId,
+				"verificationToken"	: token
+			}, { "collapseKey" : "Pending Verification" });
+	},
+
+	verify : function(regId, token) {
+		logger.debug("verifying regId:" + regId);
+		Users.findUser(regId, function(err, user) {
+			if (!user) {
+				logger.error("verification failed - couldn't find user");
+				return;
+			}
+
+			if (user.verification_token != token) {
+				logger.error("verification failed - token mismatch");
+				return;
+			}
+
+			Users.markVerified(regId, function(err, result) {
+				if (!err) {
+					Users.sendVerified(regId);
+				} else {
+					logger.error("verification failed:" + err);
+				}
+			});
+		});
+	},
+
+	markVerified : function(regId, callback) {
+		Users.updateUser(regId, { $set : { state : States.VERIFIED, last_response_ts : new Date() } }, callback);
+	},
+
+	sendVerified : function(regId) {
+		GCM.notify([regId],
+			{	"message"			: "Device was verified successfully",
+				"title"				: "Verification Succeeded",
+				"msgType"			: MessageTypes.VERIFIED,
+				"regId"				: regId
+			}, { "collapseKey" : "Verification Success" });
+	},
+
+	echo : function(regId, title, msg) {
+		GCM.notify([regId],
+			{	"message"			: msg,
+				"title"				: "ECHO: " + title,
+				"msgType"			: MessageTypes.MESSAGE,
+				"regId"				: regId
+			}, { "collapseKey" : "Echo Message" });
+	},
+
+	notify : function(regId) {
+
+	},
+
+	healthCheck : function() {
+		// try to silently push to the user once a day - if doesn't answer for 365 days, auto unregister
+	},
+
 	findUser : function(regId, callback) {
 		Users.collection.findOne({ type : "user", _id : regId }, callback);
 	},
@@ -89,71 +154,11 @@ var Users = {
 		Users.collection.findAndModify({ $or : [{ _id : regId }, { _oldId : regId }] }, undefined, { $set : data }, {}, function(err, object) {
 			callback(object); });
 	},
-	
-	askVerify : function(regId, token) {
-		logger.debug("asking to verify regId:" + regId);
-		GCM.notify([regId],
-			{	"message"			: "To verify this device please tap here",
-				"title"				: "Tap to verify",
-				"msgType"			: MessageTypes.VERIFICATION,
-				"regId"				: regId,
-				"verificationToken"	: token
-			}, { "collapseKey" : "Pending Verification" });
-	},
-	
-	verify : function(regId, token) {
-		logger.debug("verifying regId:" + regId);
-		Users.findUser(regId, function(err, user) {
-			if (!user) {
-				logger.error("verification failed - couldn't find user");
-				return;
-			}
-			
-			if (user.verification_token != token) {
-				logger.error("verification failed - token mismatch");
-				return;
-			}
-			
-			Users.markVerified(regId, function(err, result) {
-				if (!err) {
-					Users.sendVerified(regId);
-				} else {
-					logger.error("verification failed:" + err);
-				}
-			});
-		});
-	},
-	
-	markVerified : function(regId, callback) {
-		Users.update({ _id : regId }, { $set : { state : States.VERIFIED, last_response_ts : new Date() } }, { w : 1 } , callback);
+
+	updateUser : function(regId, data, callback) {
+		Users.collection.updateUser({ _id : regId }, data, { w : 1 } , callback);
 	},
 
-	sendVerified : function(regId) {
-		GCM.notify([regId],
-			{	"message"			: "Device was verified successfully",
-				"title"				: "Verification Succeeded",
-				"msgType"			: MessageTypes.VERIFIED,
-				"regId"				: regId
-			}, { "collapseKey" : "Verification Success" });
-	},
-
-	echo : function(regId, title, msg) {
-		GCM.notify([regId],
-			{	"message"			: msg,
-				"title"				: "ECHO: " + title,
-				"msgType"			: MessageTypes.MESSAGE,
-				"regId"				: regId
-			}, { "collapseKey" : "Echo Message" });
-	},
-	
-	notify : function(regId) {
-		
-	},
-	
-	healthCheck : function() {
-		// try to silently push to the user once a day - if doesn't answer for 365 days, auto unregister
-	},
-	
 	collection : null
 };
 
