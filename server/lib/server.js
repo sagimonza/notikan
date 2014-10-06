@@ -27,7 +27,7 @@ app.post('/echo', function(req, res){
 app.post('/register', function(req, res) {
 	logger.debug("register post call, body:" + req.body);
 
-	var regId = req.body && req.body.regId;
+	var regId = req.body && req.body.regId, oldRegId = req.body && req.body.oldRegId;
 	if (!regId) {
 		logger.error("registration failed - couldn't get registration id");
 		res.send("registration failed");
@@ -37,7 +37,7 @@ app.post('/register', function(req, res) {
 	res.send("registration started");
 
 	logger.debug("BEFORE trying to register user with regId=" + regId);
-	Users.register(regId);
+	Users.register(regId, oldRegId);
 	logger.debug("AFTER trying to register user with regId=" + regId);
 });
 

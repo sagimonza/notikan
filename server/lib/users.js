@@ -23,7 +23,19 @@ var PACKAGE_NAME = "com.ionicframework.notikan721974";
 // todo: add phone number as identifier
 
 var Users = {
-	register : function(regId) {
+	register : function(regId, oldRegId) {
+		function addUser(regId) {
+			logger.debug("register-->adding user with regId:" + regId);
+			Users.addUser(regId, function(result, token) {
+				if (result) {
+					logger.debug("register-->asking to verify user with regId:" + regId);
+					Users.askVerify(regId, token);
+				} else {
+					logger.error("user registration failed - couldn't add user with regId:" + regId);
+				}
+			});
+		}
+
 		if (!Users.collection) {
 			logger.error("user registration failed - no user collection");
 			return;
@@ -37,16 +49,17 @@ var Users = {
 					return;
 				} else {
 					logger.debug("user registration is still unverified - ask again to verify");
-					return Users.askVerify(regId);
+					return Users.askVerify(regId, user.verification_token);
 				}
-			} else {
-				Users.addUser(regId, function(result, token) {
-					if (result) {
-						Users.askVerify(regId,token);
-					} else {
-						logger.error("user registration failed - couldn't add user with regId:" + regId);
-					}
+			} else if (oldRegId) {
+				logger.debug("try to find an old user with oldRegId:" + oldRegId);
+				Users.modifyUser(oldRegId, { _id : regId, state : States.UNVERIFIED, _oldId : oldRegId }, function(oldUser) {
+					logger.debug("old user:" + oldUser);
+					if (oldUser) Users.askVerify(regId, oldUser.verification_token);
+					else addUser(regId);
 				});
+			} else {
+				addUser(regId);
 			}
 		});
 	},
@@ -61,15 +74,20 @@ var Users = {
 	addUser : function(regId, callback) {
 		var token = uuid.v4();
 		// todo: check unique token
-		apiCollection.insert({	_id 				: regId,
-								type				: "user",
-								state				: States.UNVERIFIED,
-								verification_token	: token,
-								last_response_ts	: new Date()
-							},
-							{ w : 1 },
-							function(err, result) {
-								callback(!err && result, token); });
+		Users.collection.insert({	_id 				: regId,
+									type				: "user",
+									state				: States.UNVERIFIED,
+									verification_token	: token,
+									last_response_ts	: new Date()
+								},
+								{ w : 1 },
+								function(err, result) {
+									callback(!err && result, token); });
+	},
+
+	modifyUser : function(regId, data, callback) {
+		Users.collection.findAndModify({ $or : [{ _id : regId }, { _oldId : regId }] }, undefined, { $set : data }, {}, function(err, object) {
+			callback(object); });
 	},
 	
 	askVerify : function(regId, token) {
@@ -106,7 +124,7 @@ var Users = {
 	},
 	
 	markVerified : function(regId, callback) {
-		Users.update({ _id : regId, verificationToken : undefined }, { $set : { state : States.VERIFIED, last_response_ts : new Date() } }, { w : 1 } , callback);
+		Users.update({ _id : regId }, { $set : { state : States.VERIFIED, last_response_ts : new Date() } }, { w : 1 } , callback);
 	},
 
 	sendVerified : function(regId) {
