@@ -17,18 +17,17 @@ app.get('/', function(req, res){
 
 app.post('/echo', function(req, res){
 	logger.debug("echo get call, body:" + req.body);
-	try { var bodyJSON = JSON.parse(req.body), regId = bodyJSON.regId, title = bodyJSON.title, msg = bodyJSON.message;
-	} catch(ex) { logger.error("exception:" + ex); }
+
+	var regId = req.body && req.body.regId, title = req.body && req.body.title, msg = req.body && req.body.message;
+	res.send("echo notification sent");
 
 	Users.echo(regId, title, msg);
-	res.send("echo notification sent");
 });
 
 app.post('/register', function(req, res) {
 	logger.debug("register post call, body:" + req.body);
-	try { var regId = JSON.parse(req.body).regId;
-	} catch(ex) { logger.error("exception:" + ex); }
-	
+
+	var regId = req.body && req.body.regId;
 	if (!regId) {
 		logger.error("registration failed - couldn't get registration id");
 		res.send("registration failed");
@@ -44,10 +43,9 @@ app.post('/register', function(req, res) {
 
 app.post('/verify', function(req, res) {
 	logger.debug("verify post call, body:" + req.body);
-	try { var bodyJSON = JSON.parse(req.body), regId = bodyJSON.regId, token = bodyJSON.token;
-	} catch(ex) { logger.error("exception:" + ex); }
-	
-	if (!regId || token) {
+
+	var regId = req.body && req.body.regId, token = req.body && req.body.token;
+	if (!regId || !token) {
 		logger.error("verification failed - couldn't get registration id");
 		res.send("verification failed");
 		return;
