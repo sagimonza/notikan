@@ -1,4 +1,6 @@
 
+var https = require('https');
+var fs = require('fs');
 var Express = require('express');
 var LoggerFactory = require('./logger.js')
 var Users = require('./users.js');
@@ -55,4 +57,9 @@ app.post('/verify', function(req, res) {
 	logger.debug("AFTER trying to verify user with regId=" + regId);
 });
 
-app.listen(8080);
+var options = {
+	key: fs.readFileSync('../keys/key.pem'),
+	cert: fs.readFileSync('../keys/cert.pem')
+};
+
+https.createServer(options, app).listen(8443);
