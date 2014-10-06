@@ -12,8 +12,8 @@ app.get('/', function(req, res){
 	res.send('hello world');
 });
 
-app.get('/echo', function(req, res){
-	logger.debug("echo get call");
+app.post('/echo', function(req, res){
+	logger.debug("echo get call, body:" + req.body);
 	try { var bodyJSON = JSON.parse(req.body), regId = bodyJSON.regId, title = bodyJSON.title, msg = bodyJSON.message;
 	} catch(ex) { logger.error("exception:" + ex); }
 
@@ -22,7 +22,7 @@ app.get('/echo', function(req, res){
 });
 
 app.post('/register', function(req, res) {
-	logger.debug("register post call");
+	logger.debug("register post call, body:" + req.body);
 	try { var regId = JSON.parse(req.body).regId;
 	} catch(ex) { logger.error("exception:" + ex); }
 	
@@ -40,7 +40,7 @@ app.post('/register', function(req, res) {
 });
 
 app.post('/verify', function(req, res) {
-	logger.debug("verify post call");
+	logger.debug("verify post call, body:" + req.body);
 	try { var bodyJSON = JSON.parse(req.body), regId = bodyJSON.regId, token = bodyJSON.token;
 	} catch(ex) { logger.error("exception:" + ex); }
 	
