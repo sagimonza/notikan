@@ -41,7 +41,7 @@ var Users = {
 			return;
 		}
 		
-		Users.findUser(regId, function(user) {
+		Users.findUser(regId, function(err, user) {
 			if (user) {
 				if (user.state != States.UVERIFIED) {
 					logger.debug("user already appears as registered - send verified");
@@ -102,7 +102,7 @@ var Users = {
 	
 	verify : function(regId, token) {
 		logger.debug("verifying regId:" + regId);
-		Users.findUser(regId, function(user) {
+		Users.findUser(regId, function(err, user) {
 			if (!user) {
 				logger.error("verification failed - couldn't find user");
 				return;
