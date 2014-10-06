@@ -43,7 +43,7 @@ var Users = {
 		
 		Users.findUser(regId, function(err, user) {
 			if (user) {
-				if (user.state != States.UVERIFIED) {
+				if (user.state != States.UNVERIFIED) {
 					logger.debug("user already appears as registered - send verified");
 					Users.sendVerified(regId);
 					return;
@@ -96,7 +96,8 @@ var Users = {
 			{	"message"			: "To verify this device please tap here",
 				"title"				: "Tap to verify",
 				"msgType"			: MessageTypes.VERIFICATION,
-				"verificationToken": token
+				"regId"				: regId,
+				"verificationToken"	: token
 			}, { "collapseKey" : "Pending Verification" });
 	},
 	

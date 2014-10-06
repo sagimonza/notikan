@@ -46,7 +46,7 @@ app.post('/verify', function(req, res) {
 
 	var regId = req.body && req.body.regId, token = req.body && req.body.token;
 	if (!regId || !token) {
-		logger.error("verification failed - couldn't get registration id");
+		logger.error("verification failed - regId: ".concat(regId, " token: ", token));
 		res.send("verification failed");
 		return;
 	}
