@@ -13,8 +13,6 @@ var logger = LoggerFactory.createLogger("server");
 var app = express();
 
 app.use(bodyParser.json());
-// app.get, app.post, etc called before static folder
-app.use(app.router);
 
 app.get('/', function(req, res){
 	res.send('hello world');
