@@ -343,7 +343,7 @@ var UsersDB = {
 	addUser : function(regId, callback) {
 		var token = uuid.v4();
 		// todo: check unique token
-		this.collection.insertOne(
+		this.collection.insert(
 			{	_id 				: regId,
 				type				: "user",
 				state				: States.UNVERIFIED,
