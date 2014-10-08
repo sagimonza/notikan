@@ -38,7 +38,7 @@ var Users = {
 		UsersDB.findUser(regId, function(user) {
 			if (user) {
 				user.onRegister();
-			} else if (data.oldRegId) {
+			} else if (data && data.oldRegId) {
 				Users.handleOldUserRegister(data.oldRegId, regId, data);
 			} else {
 				Users.addUserAndRegister(regId);
