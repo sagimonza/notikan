@@ -4,7 +4,6 @@ var LoggerFactory	= require('./logger.js');
 var config			= require('./config.js');
 
 var logger = LoggerFactory.createLogger("DB");
-//MongoClient.connect('mongodb://127.0.0.1:27017/test', function(err, db) {
 
 function buildMongoUrl(host, port, name, user, password) {
 	return "mongodb://".concat(user || "", user ? ":" : "", password || "", user ? "@" : "", host, ":", port, "/", name);

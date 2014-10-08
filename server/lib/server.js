@@ -44,21 +44,21 @@ app.post('/register', function(req, res) {
 	logger.debug("AFTER trying to register user with regId=" + regId);
 });
 
-app.post('/verify', function(req, res) {
-	logger.debug("verify post call, body:" + req.body);
+app.post('/pushVerify', function(req, res) {
+	logger.debug("pushVerify post call, body:" + req.body);
 
 	var regId = req.body && req.body.regId, token = req.body && req.body.token;
 	if (!regId || !token) {
-		logger.error("verification failed - regId: ".concat(regId, " token: ", token));
-		res.send("verification failed");
+		logger.error("push verification failed - regId: ".concat(regId, " token: ", token));
+		res.send("push verification failed");
 		return;
 	}
 
 	res.send('verification started');
 
-	logger.debug("BEFORE trying to verify user with regId=" + regId);
-	users.verify(regId, token);
-	logger.debug("AFTER trying to verify user with regId=" + regId);
+	logger.debug("BEFORE trying to push verify user with regId=" + regId);
+	users.pushVerify(regId, token);
+	logger.debug("AFTER trying to push verify user with regId=" + regId);
 });
 
 // todo: sign real certificates, meanwhile: openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days XXX

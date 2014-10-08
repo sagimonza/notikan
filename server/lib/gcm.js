@@ -1,6 +1,9 @@
 
-var gcm		= require('node-gcm');
-var config	= require('./config.js');
+var gcm				= require('node-gcm');
+var LoggerFactory	= require('./logger.js');
+var config			= require('./config.js');
+
+var logger = LoggerFactory.createLogger("gcm");
 
 var DEFAULT_ALL = -1;
 var DEFAULT_SOUND = 1;
@@ -8,8 +11,8 @@ var DEFAULT_VIBRATE = 2;
 var DEFAULT_LIGHTS = 4;
 
 var gcmAPI = {
-	notify : function(regIds, payload, options) {
-		console.log("GCM API notify message");
+	notify : function(regIds, payload, options, callback) {
+		logger.debug("notify message");
 		// create a message with object values
 		options.data = payload;
 		var message = new gcm.Message(options);
@@ -30,9 +33,12 @@ var gcmAPI = {
 		/**
 		 * Params: message-literal, registrationIds-array, No. of retries, callback-function
 		 **/
+		logger.debug("sending notification message:" + message);
 		sender.send(message, registrationIds, 4, function (err, result) {
-			console.log(result);
-		});
+			if (err)	logger.debug("notification wasn't sent, err:" + err);
+			else		logger.debug("notification sent result:" + result);
+
+			callback && callback(!!err); });
 	}
 };
 
