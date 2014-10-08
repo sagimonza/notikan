@@ -61,6 +61,40 @@ app.post('/pushVerify', function(req, res) {
 	logger.debug("AFTER trying to push verify user with regId=" + regId);
 });
 
+app.post('/smsVerify', function(req, res) {
+	logger.debug("smsVerify post call, body:" + req.body);
+
+	var regId = req.body && req.body.regId, phoneNumber = req.body && req.body.phoneNumber;
+	if (!regId || !phoneNumber) {
+		logger.error("sms verification failed - regId: ".concat(regId, " code: ", phoneNumber));
+		res.send("sms verification failed");
+		return;
+	}
+
+	res.send('verification started');
+
+	logger.debug("BEFORE trying to sms verify user with regId=" + regId);
+	users.smsVerify(regId, phoneNumber);
+	logger.debug("AFTER trying to sms verify user with regId=" + regId);
+});
+
+app.post('/codeVerify', function(req, res) {
+	logger.debug("codeVerify post call, body:" + req.body);
+
+	var regId = req.body && req.body.regId, code = req.body && req.body.code;
+	if (!regId || !code) {
+		logger.error("code verification failed - regId: ".concat(regId, " code: ", code));
+		res.send("code verification failed");
+		return;
+	}
+
+	res.send('verification started');
+
+	logger.debug("BEFORE trying to code verify user with regId=" + regId);
+	users.codeVerify(regId, code);
+	logger.debug("AFTER trying to code verify user with regId=" + regId);
+});
+
 // todo: sign real certificates, meanwhile: openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days XXX
 var options = {
 	key: fs.readFileSync(config.server.certKeyPath),

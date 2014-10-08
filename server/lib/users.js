@@ -20,7 +20,6 @@ var States = {
 var MessageTypes = {
 	PUSH_VERIFICATION	: "push_verification",
 	PUSH_VERIFIED		: "push_verified",
-	SMS_VERIFICATION	: "verification_sms",
 	INVALID_NUMBER		: "invalid_number",
 	INVALID_CODE		: "invalid_code",
 	VERIFIED			: "verified",
@@ -32,6 +31,7 @@ var MessageTypes = {
 // todo: add phone number as identifier
 // todo: l10n of notification messages and SMS
 // todo: handle error from GCM callbacks
+// todo: allow reset registration state
 
 var Users = {
 	register : function(regId, data) {
@@ -207,6 +207,7 @@ User.prototype = {
 			{	"message"			: "To continue verifying this device, please tap here",
 				"title"				: "Verification Step One Succeeded",
 				"msgType"			: MessageTypes.PUSH_VERIFIED,
+				"verificationToken"	: this._user.verification_token,
 				"regId"				: this._user.regId
 			}, { "collapseKey"		: "Verification Success" });
 	},
@@ -276,7 +277,7 @@ User.prototype = {
 		var $this = this;
 		UsersDB.updateUser(this._user.regId, { $set : { state : States.SMS_VERIFIED, phone_number : phoneNumber, last_response_ts : new Date() } }, function(user) {
 			if (user) {
-				user.sendSMSVerified();
+				user.sendSMSVerified(code);
 			} else {
 				// todo: send user 'reset' request?
 				logger.error("sms verification failed, couldn't mark as sms verified:" + $this.toString());
@@ -284,11 +285,12 @@ User.prototype = {
 		});
 	},
 
-	sendSMSVerified : function() {
+	sendSMSVerified : function(code) {
 		GCM.notify([this._user.regId],
 			{	"message"			: "You're device is verified, all relevant contact will appear within the app in seconds",
 				"title"				: "Verification Succeeded",
 				"msgType"			: MessageTypes.VERIFIED,
+				"verificationCode"	: code,
 				"regId"				: this._user.regId
 			}, { "collapseKey"		: "Verification Success" });
 	},
