@@ -319,9 +319,8 @@ User.prototype = {
 
 	oldToNew : function(regId, callback) {
 		var $this = this;
-		UsersDB.updateUser(this._user.oldRegId, { $set : { _id : regId } }, function(err, result) {
-			if (!err && result)
-				$this._user = result.ops[0];
+		UsersDB.updateUser(this._user.oldRegId, { $set : { _id : regId } }, function(user) {
+			if (user) $this._user = user;
 			callback(err);
 		});
 	},
@@ -352,7 +351,7 @@ var UsersDB = {
 			},
 			{ w : 1 },
 			function(err, result) {
-				callback(!err && result && new User(result.ops[0]), token); });
+				callback(!err && result && new User(result), token); });
 	},
 
 	modifyUser : function(regId, constraints, data, callback) {
@@ -365,7 +364,7 @@ var UsersDB = {
 	updateUser : function(regId, data, callback) {
 		this.collection.updateOne({ _id : regId }, data, { w : 1 } , function(err, result) {
 			if (err || !result) callback();
-			callback(!err && result && new User(result.ops[0]));
+			callback(!err && result && new User(result));
 		});
 	},
 
