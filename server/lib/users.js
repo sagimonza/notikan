@@ -48,7 +48,7 @@ var Users = {
 
 	handleOldUserRegister : function(oldRegId, regId, data) {
 		logger.debug("try to find an old user with oldRegId:" + oldRegId);
-		UsersDB.modifyUser(oldRegId, { state : States.SMS_VERIFIED }, { $set : { state : States.UNVERIFIED, _oldId : oldRegId } }, function(user) {
+		UsersDB.modifyUser(oldRegId, true, { state : States.SMS_VERIFIED }, { $set : { state : States.UNVERIFIED, _oldId : oldRegId } }, function(user) {
 			if (user && user.verifyChallenge(data.token, data.code)) {
 				logger.debug("old user is verified - updating regId and sending sms verified");
 				user.oldToNew(regId, function(err) {
@@ -192,7 +192,7 @@ User.prototype = {
 		}
 
 		var $this = this;
-		UsersDB.updateUser(this._user._id, { $set : { state : States.PUSH_VERIFIED, last_response_ts : new Date() } }, function(user) {
+		UsersDB.modifyUser(this._user._id, false, { $set : { state : States.PUSH_VERIFIED, last_response_ts : new Date() } }, function(user) {
 			if (user) {
 				user.sendPushVerified();
 			} else {
@@ -221,13 +221,13 @@ User.prototype = {
 
 		if (this._user.verification_code) {
 			logger.debug("sms verification failed - user already has verification code");
-			UsersDB.updateUser(this._user._id, { $unset : { verification_code : "" } });
+			UsersDB.modifyUser(this._user._id, false, { $unset : { verification_code : "" } });
 			return;
 		}
 
 		var $this = this;
 		var code = speakeasy.totp({ key : this._user.verification_token, step : config.users.codeStep });
-		UsersDB.updateUser(this._user._id, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
+		UsersDB.modifyUser(this._user._id, false, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
 			if (!user) {
 				logger.debug("sms verification failed - update user failed:" + $this.toString());
 				return;
@@ -242,7 +242,7 @@ User.prototype = {
 					}
 
 					logger.debug("failed to send SMS to:" + phoneNumber + " for user:" + user.toString());
-					UsersDB.updateUser(user._id, { $set : { state : States.PUSH_VERIFIED } }, function(user) {
+					UsersDB.modifyUser(user._id, false, { $set : { state : States.PUSH_VERIFIED } }, function(user) {
 						if (!user) {
 							logger.debug("failed to notify user on phone number error:" + user.toString());
 							return;
@@ -275,7 +275,7 @@ User.prototype = {
 		}
 
 		var $this = this;
-		UsersDB.updateUser(this._user._id, { $set : { state : States.SMS_VERIFIED, phone_number : phoneNumber, last_response_ts : new Date() } }, function(user) {
+		UsersDB.modifyUser(this._user._id, false, { $set : { state : States.SMS_VERIFIED, phone_number : phoneNumber, last_response_ts : new Date() } }, function(user) {
 			if (user) {
 				user.sendSMSVerified(code);
 			} else {
@@ -319,7 +319,7 @@ User.prototype = {
 
 	oldToNew : function(regId, callback) {
 		var $this = this;
-		UsersDB.updateUser(this._user._oldId, { $set : { _id : regId } }, function(user) {
+		UsersDB.modifyUser(this._user._oldId, false, { $set : { _id : regId } }, function(user) {
 			if (user) $this._user = user;
 			callback(err);
 		});
@@ -351,21 +351,14 @@ var UsersDB = {
 			},
 			{ w : 1 },
 			function(err, result) {
-				callback(!err && result && new User(result), token); });
+				callback(!err && result && new User(result[0]), token); });
 	},
 
-	modifyUser : function(regId, constraints, data, callback) {
-		var queryObj = { _oldId : regId };
+	modifyUser : function(regId, isOld, constraints, data, callback) {
+		var queryObj = isOld ? { _oldId : regId } : { _id : regId };
 		if (constraints) queryObj = { $and : [queryObj, constraints] };
 		this.collection.findAndModify(queryObj, undefined, data, { "new" : true }, function(err, object) {
 			callback(object && new User(object)); });
-	},
-
-	updateUser : function(regId, data, callback) {
-		this.collection.updateOne({ _id : regId }, data, { w : 1 } , function(err, result) {
-			if (err || !result) callback();
-			callback(!err && result && new User(result));
-		});
 	},
 
 	collection : null
