@@ -172,11 +172,11 @@ User.prototype = {
 
 	askPushVerify : function(token) {
 		logger.debug("asking to push verify user:" + this.toString());
-		GCM.notify([this._user.regId],
+		GCM.notify([this._user._id],
 			{	"message"			: "To start verifying this device please tap here",
 				"title"				: "Verification Step One",
 				"msgType"			: MessageTypes.PUSH_VERIFICATION,
-				"regId"				: this._user.regId,
+				"regId"				: this._user._id,
 				"verificationToken"	: token
 			}, { "collapseKey"		: "Pending Verification" });
 	},
@@ -192,7 +192,7 @@ User.prototype = {
 		}
 
 		var $this = this;
-		UsersDB.updateUser(this._user.regId, { $set : { state : States.PUSH_VERIFIED, last_response_ts : new Date() } }, function(user) {
+		UsersDB.updateUser(this._user._id, { $set : { state : States.PUSH_VERIFIED, last_response_ts : new Date() } }, function(user) {
 			if (user) {
 				user.sendPushVerified();
 			} else {
@@ -203,12 +203,12 @@ User.prototype = {
 	},
 
 	sendPushVerified : function() {
-		GCM.notify([this._user.regId],
+		GCM.notify([this._user._id],
 			{	"message"			: "To continue verifying this device, please tap here",
 				"title"				: "Verification Step One Succeeded",
 				"msgType"			: MessageTypes.PUSH_VERIFIED,
 				"verificationToken"	: this._user.verification_token,
-				"regId"				: this._user.regId
+				"regId"				: this._user._id
 			}, { "collapseKey"		: "Verification Success" });
 	},
 
@@ -221,13 +221,13 @@ User.prototype = {
 
 		if (this._user.verification_code) {
 			logger.debug("sms verification failed - user already has verification code");
-			UsersDB.updateUser(user.regId, { $unset : { verification_code : "" } });
+			UsersDB.updateUser(this._user._id, { $unset : { verification_code : "" } });
 			return;
 		}
 
 		var $this = this;
 		var code = speakeasy.totp({ key : this._user.verification_token, step : config.users.codeStep });
-		UsersDB.updateUser(this._user.regId, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
+		UsersDB.updateUser(this._user._id, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
 			if (!user) {
 				logger.debug("sms verification failed - update user failed:" + $this.toString());
 				return;
@@ -242,7 +242,7 @@ User.prototype = {
 					}
 
 					logger.debug("failed to send SMS to:" + phoneNumber + " for user:" + user.toString());
-					UsersDB.updateUser(user.regId, { $set : { state : States.PUSH_VERIFIED } }, function(user) {
+					UsersDB.updateUser(user._id, { $set : { state : States.PUSH_VERIFIED } }, function(user) {
 						if (!user) {
 							logger.debug("failed to notify user on phone number error:" + user.toString());
 							return;
@@ -255,11 +255,11 @@ User.prototype = {
 	},
 
 	sendPhoneNumberError : function(phoneNumber) {
-		GCM.notify([this._user.regId],
+		GCM.notify([this._user._id],
 			{	"message"			: "You've entered an invalid phone number '".concat(phoneNumber, "'. Tap here to re enter your phone number"),
 				"title"				: "Verification Failed - Invalid Phone Number",
 				"msgType"			: MessageTypes.INVALID_NUMBER,
-				"regId"				: this._user.regId
+				"regId"				: this._user._id
 			}, { "collapseKey"		: "Verification Failed" });
 	},
 
@@ -275,7 +275,7 @@ User.prototype = {
 		}
 
 		var $this = this;
-		UsersDB.updateUser(this._user.regId, { $set : { state : States.SMS_VERIFIED, phone_number : phoneNumber, last_response_ts : new Date() } }, function(user) {
+		UsersDB.updateUser(this._user._id, { $set : { state : States.SMS_VERIFIED, phone_number : phoneNumber, last_response_ts : new Date() } }, function(user) {
 			if (user) {
 				user.sendSMSVerified(code);
 			} else {
@@ -286,30 +286,30 @@ User.prototype = {
 	},
 
 	sendSMSVerified : function(code) {
-		GCM.notify([this._user.regId],
+		GCM.notify([this._user._id],
 			{	"message"			: "You're device is verified, all relevant contact will appear within the app in seconds",
 				"title"				: "Verification Succeeded",
 				"msgType"			: MessageTypes.VERIFIED,
 				"verificationCode"	: code,
-				"regId"				: this._user.regId
+				"regId"				: this._user._id
 			}, { "collapseKey"		: "Verification Success" });
 	},
 
 	sendCodeError : function(code) {
-		GCM.notify([this._user.regId],
+		GCM.notify([this._user._id],
 			{	"message"			: "You've entered an invalid verification code '".concat(code, "'. Tap here to re enter the code"),
 				"title"				: "Verification Failed - Invalid Code",
 				"msgType"			: MessageTypes.INVALID_CODE,
-				"regId"				: this._user.regId
+				"regId"				: this._user._id
 			}, { "collapseKey"		: "Verification Failed" });
 	},
 
 	echo : function(title, msg) {
-		GCM.notify([this._user.regId],
+		GCM.notify([this._user._id],
 			{	"message"			: msg,
 				"title"				: "ECHO: " + title,
 				"msgType"			: MessageTypes.MESSAGE,
-				"regId"				: this._user.regId
+				"regId"				: this._user._id
 			}, { "collapseKey"		: "Echo Message" });
 	},
 
@@ -319,14 +319,14 @@ User.prototype = {
 
 	oldToNew : function(regId, callback) {
 		var $this = this;
-		UsersDB.updateUser(this._user.oldRegId, { $set : { _id : regId } }, function(user) {
+		UsersDB.updateUser(this._user._oldId, { $set : { _id : regId } }, function(user) {
 			if (user) $this._user = user;
 			callback(err);
 		});
 	},
 
 	toString : function() {
-		return this._user.regId;
+		return this._user._id;
 	},
 
 	_user : null
