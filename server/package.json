@@ -4,11 +4,14 @@
   "description": "Notify 'kan'",
   "main": "./lib/server",
   "dependencies": {
-    "express":		">=0.3.32",
+    "express":		">=4.9.5",
 	"body-parser":  "~1.9.0",
 	"node-gcm":		"~0.9.6",
 	"node-uuid":	"~1.4.1",
-	"mongodb":		"~1.4.18"
+	"mongodb":		"~1.4.18",
+	"socket.io":    "~1.1.0",
+	"twilio":       "~1.7.0",
+    "speakeasy":    "~1.0.3"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
@@ -17,7 +20,7 @@
     "grunt-contrib-uglify": "~0.5.0"
   },
   "engines": {
-    "node": ">=0.8.0"
+    "node": ">=0.10.0"
   },
   "repository": {
     "type": "git",

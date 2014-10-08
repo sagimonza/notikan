@@ -1,8 +1,8 @@
 
-var MongoClient = require('mongodb').MongoClient,
-	LoggerFactory = require('./logger.js')
+var MongoClient		= require('mongodb').MongoClient;
+var LoggerFactory	= require('./logger.js');
+var config			= require('./config.js');
 
-	
 var logger = LoggerFactory.createLogger("DB");
 //MongoClient.connect('mongodb://127.0.0.1:27017/test', function(err, db) {
 
@@ -12,7 +12,7 @@ function buildMongoUrl(host, port, name, user, password) {
 
 var databases = {
 	api : {
-		url : buildMongoUrl("ds043180.mongolab.com", 43180, "api", "sagi_admin", "monza2846"),
+		url : buildMongoUrl(config.db.url, config.db.port, config.db.api, config.db.username, config.db.password),
 		activeCounters : {},
 		active : null
 	}

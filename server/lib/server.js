@@ -1,15 +1,20 @@
 
-var https = require('https');
-var fs = require('fs');
-var express = require('express');
-var bodyParser = require('body-parser');
-var LoggerFactory = require('./logger.js');
-var Users = require('./users.js');
+var https			= require('https');
+var socketio		= require('socket.io');
+var express			= require('express');
+var bodyParser		= require('body-parser');
+
+var fs				= require('fs');
+var LoggerFactory	= require('./logger.js');
+var config			= require('./config.js');
+var users			= require('./users.js');
 
 var logger = LoggerFactory.createLogger("server");
 var app = express();
 
 app.use(bodyParser.json());
+// app.get, app.post, etc called before static folder
+app.use(app.router);
 
 app.get('/', function(req, res){
 	res.send('hello world');
@@ -21,7 +26,7 @@ app.post('/echo', function(req, res){
 	var regId = req.body && req.body.regId, title = req.body && req.body.title, msg = req.body && req.body.message;
 	res.send("echo notification sent");
 
-	Users.echo(regId, title, msg);
+	users.echo(regId, title, msg);
 });
 
 app.post('/register', function(req, res) {
@@ -37,7 +42,7 @@ app.post('/register', function(req, res) {
 	res.send("registration started");
 
 	logger.debug("BEFORE trying to register user with regId=" + regId);
-	Users.register(regId, oldRegId);
+	users.register(regId, oldRegId);
 	logger.debug("AFTER trying to register user with regId=" + regId);
 });
 
@@ -54,14 +59,20 @@ app.post('/verify', function(req, res) {
 	res.send('verification started');
 
 	logger.debug("BEFORE trying to verify user with regId=" + regId);
-	Users.verify(regId, token);
+	users.verify(regId, token);
 	logger.debug("AFTER trying to verify user with regId=" + regId);
 });
 
 // todo: sign real certificates, meanwhile: openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days XXX
 var options = {
-	key: fs.readFileSync('./keys/key.pem'),
-	cert: fs.readFileSync('./keys/cert.pem')
+	key: fs.readFileSync(config.server.certKeyPath),
+	cert: fs.readFileSync(config.server.certPath)
 };
 
-https.createServer(options, app).listen(8443);
+var server = https.createServer(options, app);
+var io = socketio(server);
+io.on('connection', function(socket){
+	socket.on('event', function(data){});
+	socket.on('disconnect', function(){});
+});
+server.listen(8443);

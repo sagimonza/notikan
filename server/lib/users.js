@@ -1,8 +1,9 @@
 
-var LoggerFactory = require('./logger.js')
-var uuid = require('node-uuid');
-var DB = require('./db.js');
-var GCM = require('./gcm.js');
+var uuid			= require('node-uuid');
+var LoggerFactory	= require('./logger.js');
+var config			= require('./config.js');
+var DB				= require('./db.js');
+var GCM				= require('./gcm.js');
 
 var logger = LoggerFactory.createLogger("users");
 
@@ -16,8 +17,6 @@ var MessageTypes = {
 	VERIFIED		: "verified",
 	MESSAGE			: "message"
 };
-
-var PACKAGE_NAME = "com.ionicframework.notikan721974";
 
 // todo: handle cases where regId is being replaced and messages are in the queue for the old id
 // todo: add phone number as identifier
