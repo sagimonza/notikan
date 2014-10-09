@@ -234,7 +234,7 @@ User.prototype = {
 			}
 
 			SMS.send(phoneNumber,
-				"Your verification code is:".concat(code, ".\nIn order to verify your device, please enter it to the 'Verification Code' input field and submit."),
+				"Your verification code is:".concat(code, ".\nPlease enter it to the 'Verification Code' input field and submit."),
 				function(smsFailed) {
 					if (!smsFailed) {
 						logger.debug("SMS was sent successfully to:" + phoneNumber + " for user:" + user.toString());
