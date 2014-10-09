@@ -124,7 +124,7 @@ var Users = {
 				return;
 			}
 
-			user.onEcho(title, msg);
+			user.sendEcho(title, msg);
 		});
 	},
 
@@ -287,7 +287,7 @@ User.prototype = {
 
 	sendSMSVerified : function(code) {
 		GCM.notify([this._user._id],
-			{	"message"			: "You're device is verified, all relevant contact will appear within the app in seconds",
+			{	"message"			: "You're device is verified, all relevant contacts will appear within your app in seconds",
 				"title"				: "Verification Succeeded",
 				"msgType"			: MessageTypes.VERIFIED,
 				"verificationCode"	: code,
@@ -304,7 +304,7 @@ User.prototype = {
 			}, { "collapseKey"		: "Verification Failed" });
 	},
 
-	echo : function(title, msg) {
+	sendEcho : function(title, msg) {
 		GCM.notify([this._user._id],
 			{	"message"			: msg,
 				"title"				: "ECHO: " + title,
