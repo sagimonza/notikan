@@ -81,9 +81,9 @@ app.post('/smsVerify', function(req, res) {
 app.post('/codeVerify', function(req, res) {
 	logger.debug("codeVerify post call, body:" + req.body);
 
-	var regId = req.body && req.body.regId, code = req.body && req.body.code;
-	if (!regId || !code) {
-		logger.error("code verification failed - regId: ".concat(regId, " code: ", code));
+	var regId = req.body && req.body.regId, phoneNumber = req.body && req.body.phoneNumber, code = req.body && req.body.code;
+	if (!regId || !phoneNumber || !code) {
+		logger.error("code verification failed - regId: ".concat(regId, " phone number:", phoneNumber, " code: ", code));
 		res.send("code verification failed");
 		return;
 	}
@@ -91,7 +91,7 @@ app.post('/codeVerify', function(req, res) {
 	res.send('verification started');
 
 	logger.debug("BEFORE trying to code verify user with regId=" + regId);
-	users.codeVerify(regId, code);
+	users.codeVerify(regId, phoneNumber, code);
 	logger.debug("AFTER trying to code verify user with regId=" + regId);
 });
 
