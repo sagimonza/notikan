@@ -64,6 +64,50 @@
         <ion-content scroll="false">
         </ion-content>
     </ion-side-menu>
+    <script id="enter_phone_number.html" type="text/ng-template">
+        <div class="modal">
+            <!-- Modal header bar -->
+            <ion-header-bar class="bar-secondary">
+                <h1 class="title">Enter Your Phone Number</h1>
+            </ion-header-bar>
+
+            <!-- Modal content area -->
+            <ion-content>
+                <form ng-submit="smsVerify(phoneNumber)">
+                    <div class="list">
+                        <label class="item item-input">
+                            <input type="tel" placeholder="Phone Number" ng-model="phoneNumber">
+                        </label>
+                    </div>
+                    <div class="padding">
+                        <button type="submit" class="button button-block button-positive">Get Verification Code</button>
+                    </div>
+                </form>
+            </ion-content>
+        </div>
+    </script>
+    <script id="verification_code.html" type="text/ng-template">
+        <div class="modal">
+            <!-- Modal header bar -->
+            <ion-header-bar class="bar-secondary">
+                <h1 class="title">Enter SMS Verification Code</h1>
+            </ion-header-bar>
+
+            <!-- Modal content area -->
+            <ion-content>
+                <form ng-submit="codeVerify(verificationCode)">
+                    <div class="list">
+                        <label class="item item-input">
+                            <input type="number" placeholder="SMS verification code" ng-model="verificationCode">
+                        </label>
+                    </div>
+                    <div class="padding">
+                        <button type="submit" class="button button-block button-positive">Verify</button>
+                    </div>
+                </form>
+            </ion-content>
+        </div>
+    </script
 </ion-side-menus>
 </body>
 </html>

@@ -32,30 +32,24 @@ pushModule.factory("pushService", ["$log", "$cordovaPush", function($log, $cordo
 					break;
 
 				case 'message':
-					// if this flag is set, this notification happened while we were in the foreground.
-					// you might want to play a sound to get the user's attention, throw up a dialog, etc.
-					if ( e.foreground ) {
-						PushObj.broadcast("push/message", e);
+					PushObj.broadcast("push/message", e);
 
+					if (e.foreground) {
 						appendStatus('--INLINE NOTIFICATION--');
 
 						// on Android soundname is outside the payload.
-						// On Amazon FireOS all custom attributes are contained within payload
+						// on Amazon FireOS all custom attributes are contained within payload
 						var soundfile = e.soundname || e.payload.sound;
-						// if the notification contains a soundname, play it.
 						if (soundfile) {
 							var my_media = new Media("/android_asset/www/"+ soundfile);
 							if (my_media) my_media.play();
 						}
 					}
 					else {  // otherwise we were launched because the user touched a notification in the notification tray.
-						if ( e.coldstart ) {
-							PushObj.broadcast("push/message", e);
+						if (e.coldstart)
 							appendStatus('--COLDSTART NOTIFICATION--');
-						} else {
-							PushObj.broadcast("push/message", e);
+						else
 							appendStatus('--BACKGROUND NOTIFICATION--');
-						}
 					}
 
 					appendStatus('MESSAGE -> MSG: ' + e.payload.message);
@@ -63,15 +57,18 @@ pushModule.factory("pushService", ["$log", "$cordovaPush", function($log, $cordo
 					appendStatus('MESSAGE -> MSGCNT: ' + e.payload.msgcnt);
 					//Only works on Amazon Fire OS
 					appendStatus('MESSAGE -> TIME: ' + e.payload.timeStamp);
+
 					break;
 
 				case 'error':
 					PushObj.broadcast("push/error", e);
+
 					appendStatus('ERROR -> MSG:' + e.msg);
 					break;
 
 				default:
 					PushObj.broadcast("push/unknown", e);
+
 					appendStatus('EVENT -> Unknown, an event was received and we do not know what it is');
 					break;
 			}
