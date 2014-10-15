@@ -14,85 +14,45 @@ var app = express();
 
 app.use(bodyParser.json());
 
+function apiCall(req, res, methodName) {
+	logger.debug(methodName.concat(" call for:" + (req.body && req.body.regId)));
+
+	var err = users[methodName](req.body);
+	if (!err) {
+		res.send(methodName + " started");
+	} else {
+		logger.error(methodName.concat(" failed - ", err));
+		res.send(methodName + " failed");
+	}
+}
+// todo: avoid writing regId to log in all files
+
 app.get('/', function(req, res){
 	res.send('hello world');
 });
 
-app.post('/echo', function(req, res){
-	logger.debug("echo get call, body:" + req.body);
-
-	var regId = req.body && req.body.regId, title = req.body && req.body.title, msg = req.body && req.body.message;
-	res.send("echo notification sent");
-
-	users.echo(regId, title, msg);
-});
-
 app.post('/register', function(req, res) {
-	logger.debug("register post call, body:" + req.body);
-
-	var regId = req.body && req.body.regId, data = req.body && req.body.data;
-	if (!regId) {
-		logger.error("registration failed - couldn't get registration id");
-		res.send("registration failed");
-		return;
-	}
-
-	res.send("registration started");
-
-	logger.debug("BEFORE trying to register user with regId=" + regId);
-	users.register(regId, data);
-	logger.debug("AFTER trying to register user with regId=" + regId);
+	apiCall(req, res, "register");
 });
 
 app.post('/pushVerify', function(req, res) {
-	logger.debug("pushVerify post call, body:" + req.body);
-
-	var regId = req.body && req.body.regId, token = req.body && req.body.token;
-	if (!regId || !token) {
-		logger.error("push verification failed - regId: ".concat(regId, " token: ", token));
-		res.send("push verification failed");
-		return;
-	}
-
-	res.send('verification started');
-
-	logger.debug("BEFORE trying to push verify user with regId=" + regId);
-	users.pushVerify(regId, token);
-	logger.debug("AFTER trying to push verify user with regId=" + regId);
+	apiCall(req, res, "pushVerify");
 });
 
 app.post('/smsVerify', function(req, res) {
-	logger.debug("smsVerify post call, body:" + req.body);
-
-	var regId = req.body && req.body.regId, phoneNumber = req.body && req.body.phoneNumber;
-	if (!regId || !phoneNumber) {
-		logger.error("sms verification failed - regId: ".concat(regId, " code: ", phoneNumber));
-		res.send("sms verification failed");
-		return;
-	}
-
-	res.send('verification started');
-
-	logger.debug("BEFORE trying to sms verify user with regId=" + regId);
-	users.smsVerify(regId, phoneNumber);
-	logger.debug("AFTER trying to sms verify user with regId=" + regId);
+	apiCall(req, res, "smsVerify");
 });
 
 app.post('/codeVerify', function(req, res) {
-	logger.debug("codeVerify post call, body:" + req.body);
+	apiCall(req, res, "codeVerify");
+});
 
-	var regId = req.body && req.body.regId, phoneNumber = req.body && req.body.phoneNumber, code = req.body && req.body.code;
-	if (!regId || !phoneNumber || !code) {
-		logger.error("code verification failed - regId: ".concat(regId, " phone number:", phoneNumber, " code: ", code));
-		res.send("code verification failed");
-		return;
-	}
+app.post('/unregister', function(req, res) {
+	apiCall(req, res, "unregister");
+});
 
-	res.send('verification started');
-
-	logger.debug("BEFORE trying to code verify user with regId=" + regId);
-	users.codeVerify(regId, phoneNumber, code);
-	logger.debug("AFTER trying to code verify user with regId=" + regId);
+app.post('/echo', function(req, res){
+	apiCall(req, res, "echo");
 });
 
 // todo: sign real certificates, meanwhile: openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days XXX

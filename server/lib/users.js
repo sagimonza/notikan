@@ -11,6 +11,7 @@ var SMS				= require('./sms.js');
 var logger = LoggerFactory.createLogger("users");
 
 var States = {
+	INVALID			: -1,
 	UNVERIFIED		: 0,
 	PUSH_VERIFIED	: 1,
 	CODE_PENDING	: 2,
@@ -21,6 +22,7 @@ var MessageTypes = {
 	PUSH_VERIFICATION	: "push_verification",
 	PUSH_VERIFIED		: "push_verified",
 	INVALID_NUMBER		: "invalid_number",
+	USED_NUMBER			: "used_number",
 	INVALID_CODE		: "invalid_code",
 	VERIFIED			: "verified",
 	MESSAGE				: "message"
@@ -32,26 +34,130 @@ var MessageTypes = {
 // todo: l10n of notification messages and SMS
 // todo: handle error from GCM callbacks
 // todo: allow reset registration state
+// todo: use sms_verify_tries to block user for X minutes after too many invalid number attempts
+
 
 var Users = {
-	register : function(regId, data) {
-		UsersDB.findUser(regId, function(user) {
+	register : function(data) {
+		var paramsError = Users._verifyParams(data);
+		if (paramsError) return "invalid params:" + paramsError;
+
+		UsersDB.findUser(data.regId, function(user) {
 			if (user) {
-				user.onRegister();
+				if (data.forceReset)
+					user.resetRegistration();
+				else
+					logger.debug("ignoring register request for existing user without 'forceReset' flag");
 			} else if (data && data.oldRegId) {
-				Users.handleOldUserRegister(data.oldRegId, regId, data);
+				Users._handleOldUserRegister(data.oldRegId, data.regId, data);
 			} else {
-				Users.addUserAndRegister(regId);
+				Users.addUserAndRegister(data.regId);
 			}
 		});
 	},
 
-	handleOldUserRegister : function(oldRegId, regId, data) {
+	pushVerify : function(data) {
+		var paramsError = Users._verifyParams(data, ["token"]);
+		if (paramsError) return "invalid params:" + paramsError;
+
+		UsersDB.findUser(data.regId, function(user) {
+			if (!user) {
+				logger.debug("push verification failed - couldn't find user");
+				return;
+			}
+
+			user.onPushVerify(data);
+		});
+	},
+
+	smsVerify : function(data) {
+		var paramsError = Users._verifyParams(data, ["phoneNumber"]);
+		if (paramsError) return "invalid params:" + paramsError;
+
+		UsersDB.findUser(data.regId, function(user) {
+			if (!user) {
+				logger.debug("sms verification failed - couldn't find user");
+				return;
+			}
+
+			user.onSmsVerify(data);
+		});
+	},
+
+	codeVerify : function(data) {
+		var paramsError = Users._verifyParams(data, ["phoneNumber", "code"]);
+		if (paramsError) return "invalid params:" + paramsError;
+
+		UsersDB.findUser(data.regId, function(user) {
+			if (!user) {
+				logger.debug("sms verification failed - couldn't find user");
+				return;
+			}
+
+			user.onCodeVerify(data);
+		});
+	},
+
+	echo : function(data) {
+		var paramsError = Users._verifyParams(data, ["title", "message"]);
+		if (paramsError) return "invalid params:" + paramsError;
+
+		UsersDB.findUser(data.regId, function(user) {
+			if (!user) {
+				logger.debug("echo failed - couldn't find user");
+				return;
+			}
+
+			user.sendEcho(data.title, data.message);
+		});
+	},
+
+	unregister : function(data) {
+		var paramsError = Users._verifyParams(data);
+		if (paramsError) return "invalid params:" + paramsError;
+
+		UsersDB.findUser(data.regId, function(user) {
+			if (!user) {
+				logger.debug("unregistration failed - couldn't find user");
+				return;
+			}
+
+			user.invalidate(function(user) {
+				if (!user) logger.debug("unregistration failed - couldn't invalidate user"); });
+		});
+	},
+
+	addUserAndRegister : function(regId, callback) {
+		logger.debug("register-->adding user with regId:" + regId);
+		UsersDB.addUser(regId, function(user, token) {
+			if (user) {
+				user.askPushVerify(token);
+			} else {
+				logger.error("user registration failed - couldn't add user with regId:" + regId);
+			}
+			callback && callback(user);
+		});
+	},
+
+	_verifyParams : function(reqBody, expectedParams) {
+		function paramError(params) { return "missing " + params; }
+
+		if (!reqBody) return paramError("body");
+		if (!reqBody.regId) return paramError("regId");
+		if (expectedParams) {
+			var missingParams = [];
+			expectedParams.forEach(function(param) {
+				if (!reqBody.hasOwnProperty(param)) missingParams.push(param); });
+			if (missingParams.length) return paramError(missingParams);
+		}
+	},
+
+	_handleOldUserRegister : function(oldRegId, regId, data) {
 		logger.debug("try to find an old user with oldRegId:" + oldRegId);
 		UsersDB.modifyUser(oldRegId, true, { state : States.SMS_VERIFIED }, { $set : { state : States.UNVERIFIED, _oldId : oldRegId } }, function(user) {
-			if (user && user.verifyChallenge(data.token, data.code)) {
+			if (user && user.verifyChallenge(data)) {
 				logger.debug("old user is verified - updating regId and sending sms verified");
-				user.oldToNew(regId, function(err) {
+				user.oldToNew(regId, States.SMS_VERIFIED, function(err) {
 					if (err) {
 						logger.error("failed to update oldRegId:".concat(data.oldRegId, " to regId:", regId));
 						return;
@@ -68,73 +174,10 @@ var Users = {
 		});
 	},
 
-	addUserAndRegister : function(regId) {
-		logger.debug("register-->adding user with regId:" + regId);
-		UsersDB.addUser(regId, function(user, token) {
-			if (user) {
-				user.askPushVerify(token);
-			} else {
-				logger.error("user registration failed - couldn't add user with regId:" + regId);
-			}
-		});
-	},
-	
-	unregister : function() {
+	notify : function(regId) {},
 
-	},
-
-	pushVerify : function(regId, token) {
-		logger.debug("push verifying regId:" + regId);
-		UsersDB.findUser(regId, function(user) {
-			if (!user) {
-				logger.debug("push verification failed - couldn't find user");
-				return;
-			}
-
-			user.onPushVerify(token);
-		});
-	},
-
-	smsVerify : function(regId, phoneNumber) {
-		UsersDB.findUser(regId, function(user) {
-			if (!user) {
-				logger.debug("sms verification failed - couldn't find user");
-				return;
-			}
-
-			user.onSmsVerify(phoneNumber);
-		})
-	},
-
-	codeVerify : function(regId, phoneNumber, code) {
-		UsersDB.findUser(regId, function(user) {
-			if (!user) {
-				logger.debug("sms verification failed - couldn't find user");
-				return;
-			}
-
-			user.onCodeVerify(phoneNumber, code);
-		});
-	},
-
-	echo : function(regId, title, msg) {
-		UsersDB.findUser(regId, function(user) {
-			if (!user) {
-				logger.debug("echo failed - couldn't find user");
-				return;
-			}
-
-			user.sendEcho(title, msg);
-		});
-	},
-
-	notify : function(regId) {
-
-	},
-
-	healthCheck : function() {
-		// try to silently push to the user once a day - if doesn't answer for 365 days, auto unregister
-	}
+	// try to silently push to the user once a day - if doesn't answer for 365 days, auto unregister
+	healthCheck : function() {}
 };
 
 function User(user) {
@@ -142,23 +185,23 @@ function User(user) {
 }
 
 User.prototype = {
-	onRegistrationStep : function(step, unverifiedCallback, pushVerifiedCallback, codePendingCallback, smsVerifiedCallback, params) {
+	onRegistrationStep : function(step, unverifiedCallback, pushVerifiedCallback, codePendingCallback, smsVerifiedCallback, data) {
 		logger.debug("on '".concat(step, "' for user:", this.toString()));
 		switch (this._user.state) {
 			case States.UNVERIFIED :
-				if (unverifiedCallback) unverifiedCallback.apply(this, params);
+				if (unverifiedCallback) unverifiedCallback.call(this, data);
 				else logger.debug("user registration state is unverified - he must reset to re initiate the registration");
 				break;
 			case States.PUSH_VERIFIED :
-				if (pushVerifiedCallback) pushVerifiedCallback.apply(this, params);
+				if (pushVerifiedCallback) pushVerifiedCallback.call(this, data);
 				else logger.debug("user registration state is pushed unverified - he must reset to re initiate the registration");
 				break;
 			case States.CODE_PENDING :
-				if (codePendingCallback) codePendingCallback.apply(this, params);
+				if (codePendingCallback) codePendingCallback.call(this, data);
 				else logger.debug("user registration state is code pending - he must reset to re initiate the registration");
 				break;
 			case States.SMS_VERIFIED :
-				if (smsVerifiedCallback) smsVerifiedCallback.apply(this, params);
+				if (smsVerifiedCallback) smsVerifiedCallback.call(this, data);
 				else {
 					logger.debug("user registration is already sms verified - send sms verified");
 					this.sendSMSVerified();
@@ -166,8 +209,17 @@ User.prototype = {
 		}
 	},
 
-	onRegister : function() {
-		this.onRegistrationStep("register");
+	resetRegistration : function() {
+		var $this = this;
+		this.invalidate(function(user, invalidId) {
+			if (!user) {
+				logger.error("reset registration failed - couldn't invalidate user:" + $this.toString());
+				return;
+			}
+
+			Users.addUserAndRegister($this._user._id, function(addedUser) {
+				if (!addedUser) logger.error("reset registration failed - couldn't add user:" + $this.toString()); });
+		});
 	},
 
 	askPushVerify : function(token) {
@@ -181,13 +233,13 @@ User.prototype = {
 			}, { "collapseKey"		: "Pending Verification" });
 	},
 
-	onPushVerify : function(token) {
-		this.onRegistrationStep("push verify", this.verifyToken, null, null, null, [token]);
+	onPushVerify : function(data) {
+		this.onRegistrationStep("push verify", this.verifyToken, null, null, null, data);
 	},
 
-	verifyToken : function(token) {
-		if (this._user.verification_token != token) {
-			logger.debug("push verification failed - token mismatch");
+	verifyToken : function(data) {
+		if (!this._user.verification_token || this._user.verification_token != data.token) {
+			logger.debug("push verification failed - token mismatch, token exist:" + !!this._user.verification_token);
 			return;
 		}
 
@@ -212,49 +264,99 @@ User.prototype = {
 			}, { "collapseKey"		: "Verification Success" });
 	},
 
-	onSmsVerify : function(phoneNumber) {
-		this.onRegistrationStep("sms verify", null, this.askSMSVerify, null, null, [phoneNumber]);
+	onSmsVerify : function(data) {
+		this.onRegistrationStep("sms verify", null, this.askSMSVerify, null, null, data);
 	},
 
-	askSMSVerify : function(phoneNumber) {
+	askSMSVerify : function(data) {
 		logger.debug("asking to sms verify user:" + this.toString());
 
 		if (this._user.verification_code) {
 			logger.debug("sms verification failed - user already has verification code");
-			UsersDB.modifyUser(this._user._id, false, null, { $unset : { verification_code : "" } });
 			return;
 		}
 
 		var $this = this;
-		var code = speakeasy.totp({ key : this._user.verification_token, step : config.users.codeStep });
-		UsersDB.modifyUser(this._user._id, false, null, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
-			if (!user) {
-				logger.debug("sms verification failed - update user failed:" + $this.toString());
+		UsersDB.findUserWithNumber(data.phoneNumber, function(user) {
+			if (user)
+				user.handleRegisteredPhoneNumber($this._user._id, data.phoneNumber, data.overrideIfExist);
+			else
+				$this.askSMSVerifyUniqueNumber(data.phoneNumber); });
+	},
+
+	handleRegisteredPhoneNumber : function(newRegId, phoneNumber, overrideIfExist) {
+		if (!overrideIfExist) {
+			logger.debug("sms verification failed - phone number is already registered");
+			this.sendPhoneNumberUsedError(this._user.phone_number);
+			return;
+		}
+
+		logger.debug("sms verification continue with an already registered phone number");
+		this.invalidate(function(invalidatedUser) {
+			if (!invalidatedUser) {
+				logger.error("phone number registration failed - couldn't invalidate old user");
 				return;
 			}
 
-			SMS.send(phoneNumber,
-				"Your verification code is:".concat(code, ".\nPlease enter it to the 'Verification Code' input field and submit."),
-				function(smsFailed) {
-					if (!smsFailed) {
-						logger.debug("SMS was sent successfully to:" + phoneNumber + " for user:" + user.toString());
-						return;
-					}
+			UsersDB.modifyUser(newRegId, false, null, { $set : { appears_in_numbers : invalidatedUser.appears_in_numbers } }, function(user) {
+				if (!user) {
+					logger.error("sms verification failed - couldn't update new user");
+					return;
+				}
 
-					logger.debug("failed to send SMS to:" + phoneNumber + " for user:" + user.toString());
-					UsersDB.modifyUser(user._id, false, null, { $set : { state : States.PUSH_VERIFIED } }, function(user) {
-						if (!user) {
-							logger.debug("failed to notify user on phone number error:" + user.toString());
-							return;
-						}
-
-						user.sendPhoneNumberError(phoneNumber);
-					});
-				});
+				user.askSMSVerifyUniqueNumber(phoneNumber);
+			});
 		});
 	},
 
-	sendPhoneNumberError : function(phoneNumber) {
+	askSMSVerifyUniqueNumber : function(phoneNumber) {
+		UsersDB.findUser(this._user._id, function(origUser) {
+			if (!origUser) {
+				logger.error("sms verification failed - couldn't find user after phone validation");
+				return;
+			}
+
+			var code = speakeasy.totp({ key : origUser._user.verification_token, step : config.users.codeStep });
+			UsersDB.modifyUser(origUser._user._id, false, null, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
+				if (!user) {
+					logger.debug("sms verification failed - update user failed:" + origUser.toString());
+					return;
+				}
+
+				SMS.send(phoneNumber,
+					"Your verification code is:".concat(code, ".\nPlease enter it to the 'Verification Code' input field and submit."),
+					function(smsFailed) {
+						if (!smsFailed) {
+							logger.debug("SMS was sent successfully to:" + phoneNumber + " for user:" + user.toString());
+							return;
+						}
+
+						logger.debug("failed to send SMS to:" + phoneNumber + " for user:" + user.toString());
+						var modifyData = { $set : { state : States.PUSH_VERIFIED, sms_verify_tries : (user.sms_verify_tries || 0) + 1 },
+							$unset : { verification_code : "" } };
+						UsersDB.modifyUser(user._id, false, null, modifyData, function(pushVerifiedUser) {
+							if (!pushVerifiedUser) {
+								logger.debug("failed to notify user on phone number error:" + user.toString());
+								return;
+							}
+
+							pushVerifiedUser.sendPhoneNumberInvalidError(phoneNumber);
+						});
+					});
+			});
+		});
+	},
+
+	sendPhoneNumberUsedError : function(phoneNumber) {
+		GCM.notify([this._user._id],
+			{	"message"			: "You've entered a phone number that is already registered '".concat(phoneNumber, "'. Tap here and let us know how to continue"),
+				"title"				: "Verification Failed - Already Registered Phone Number",
+				"msgType"			: MessageTypes.USED_NUMBER,
+				"regId"				: this._user._id
+			}, { "collapseKey"		: "Verification Failed" });
+	},
+
+	sendPhoneNumberInvalidError : function(phoneNumber) {
 		GCM.notify([this._user._id],
 			{	"message"			: "You've entered an invalid phone number '".concat(phoneNumber, "'. Tap here to re enter your phone number"),
 				"title"				: "Verification Failed - Invalid Phone Number",
@@ -263,21 +365,21 @@ User.prototype = {
 			}, { "collapseKey"		: "Verification Failed" });
 	},
 
-	onCodeVerify : function(phoneNumber, code) {
-		this.onRegistrationStep("sms verify", null, null, this.verifyCode, null, [phoneNumber, code]);
+	onCodeVerify : function(data) {
+		this.onRegistrationStep("sms verify", null, null, this.verifyCode, null, data);
 	},
 
-	verifyCode : function(phoneNumber, code) {
-		if (this._user.verification_code != code) {
-			logger.debug("sms verification failed - code mismatch");
-			this.sendCodeError(code);
+	verifyCode : function(data) {
+		if (!this._user.verification_code || this._user.verification_code != data.code) {
+			logger.debug("sms verification failed - code mismatch, code exist:" + !!this._user.verification_code);
+			this.sendCodeError(data.code);
 			return;
 		}
 
 		var $this = this;
-		UsersDB.modifyUser(this._user._id, false, null, { $set : { state : States.SMS_VERIFIED, phone_number : phoneNumber, last_response_ts : new Date() } }, function(user) {
+		UsersDB.modifyUser(this._user._id, false, null, { $set : { state : States.SMS_VERIFIED, phone_number : data.phoneNumber, last_response_ts : new Date() } }, function(user) {
 			if (user) {
-				user.sendSMSVerified(code);
+				user.sendSMSVerified();
 			} else {
 				// todo: send user 'reset' request?
 				logger.error("sms verification failed, couldn't mark as sms verified:" + $this.toString());
@@ -285,12 +387,12 @@ User.prototype = {
 		});
 	},
 
-	sendSMSVerified : function(code) {
+	sendSMSVerified : function() {
 		GCM.notify([this._user._id],
 			{	"message"			: "You're device is verified, all relevant contacts will appear within your app in seconds",
 				"title"				: "Verification Succeeded",
 				"msgType"			: MessageTypes.VERIFIED,
-				"verificationCode"	: code,
+				"verificationCode"	: this._user.verification_code,
 				"regId"				: this._user._id
 			}, { "collapseKey"		: "Verification Success" });
 	},
@@ -313,13 +415,21 @@ User.prototype = {
 			}, { "collapseKey"		: "Echo Message" });
 	},
 
-	verifyChallenge : function(token, code) {
-		return this._user.verification_token == token && this._user.verification_code == code;
+	invalidate : function(callback) {
+		var invalidId = process.hrtime();
+		UsersDB.modifyUser(this._user._id, false, null, { $set : { _id : invalidId, invalid_id : this._user._id,
+			state : States.INVALID, invalid_phone_number : this._user.phone_number }, $unset : { phone_number : "" } },
+			function(user) { callback(user, invalidId); });
 	},
 
-	oldToNew : function(regId, callback) {
+	verifyChallenge : function(data) {
+		return this._user.verification_token && this._user.verification_token == data.token &&
+			this._user.verification_code && this._user.verification_code == data.code;
+	},
+
+	oldToNew : function(regId, state, callback) {
 		var $this = this;
-		UsersDB.modifyUser(this._user._oldId, false, null, { $set : { _id : regId } }, function(user) {
+		UsersDB.modifyUser(this._user._oldId, false, null, { $set : { _id : regId, state : state } }, function(user) {
 			if (user) $this._user = user;
 			callback(err);
 		});
@@ -335,8 +445,12 @@ User.prototype = {
 var UsersDB = {
 	findUser : function(regId, callback) {
 		this.collection.findOne({ type : "user", _id : regId }, function(err, user) {
-			callback(user && new User(user));
-		});
+			callback(user && new User(user)); });
+	},
+
+	findUserWithNumber : function(number, callback) {
+		this.collection.findOne({ type : "user", phone_number : number }, function(err, user) {
+			callback(user && new User(user)); });
 	},
 
 	addUser : function(regId, callback) {
@@ -359,6 +473,11 @@ var UsersDB = {
 		if (constraints) queryObj = { $and : [queryObj, constraints] };
 		this.collection.findAndModify(queryObj, undefined, data, { "new" : true }, function(err, object) {
 			callback && callback(object && new User(object)); });
+	},
+
+	deleteUser : function(regId, callback) {
+		this.collection.findOneAndDelete({ _id : regId }, null, function(err, result) {
+			callback(!err && result && new User(result)); });
 	},
 
 	collection : null
