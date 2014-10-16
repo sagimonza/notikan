@@ -280,9 +280,9 @@ User.prototype = {
 		this.askSMSVerifyWithNumber(data.phoneNumber);
 	},
 
-	handleRegisteredPhoneNumber : function(newRegId, phoneNumber, overrideIfExist, callback) {
+	handleRegisteredPhoneNumber : function(newUser, phoneNumber, overrideIfExist, callback) {
 		if (!overrideIfExist) {
-			this.sendPhoneNumberUsedError(this._user.phone_number);
+			newUser.sendPhoneNumberUsedError(this._user.phone_number);
 			return callback("sms verification failed - phone number is already registered");
 		}
 
@@ -292,7 +292,7 @@ User.prototype = {
 				return callback("phone number registration failed - couldn't invalidate old user");
 			}
 
-			UsersDB.modifyUser(newRegId, false, null, { $set : { appears_in_numbers : invalidatedUser.appears_in_numbers } }, function(user) {
+			UsersDB.modifyUser(newUser._user._id, false, null, { $set : { appears_in_numbers : invalidatedUser.appears_in_numbers } }, function(user) {
 				if (!user) {
 					return callback("sms verification failed - couldn't update new user");
 				}
@@ -377,7 +377,7 @@ User.prototype = {
 		var $this = this;
 		UsersDB.findUserWithNumber(data.phoneNumber, function(user) {
 			if (user) {
-				user.handleRegisteredPhoneNumber($this._user._id, data.phoneNumber, data.overrideIfExist, function(err) {
+				user.handleRegisteredPhoneNumber($this, data.phoneNumber, data.overrideIfExist, function(err) {
 					if (err) {
 						logger.debug("failed to handle registered phone number:" + err);
 						return;
