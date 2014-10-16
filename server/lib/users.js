@@ -433,14 +433,14 @@ User.prototype = {
 	invalidate : function(callback) {
 		var invalidatedUser = this.clone(), invalidId = process.hrtime();;
 
-		invalidatedUser._id = invalidId[0] + "/" + invalidId[1];
-		invalidatedUser.invalid_id = this._user._id;
-		invalidatedUser.state = States.INVALID;
-		invalidatedUser.invalid_phone_number = this._user.phone_number;
-		delete invalidatedUser.phone_number;
+		invalidatedUser._user._id = invalidId[0] + "/" + invalidId[1];
+		invalidatedUser._user.invalid_id = this._user._id;
+		invalidatedUser._user.state = States.INVALID;
+		invalidatedUser._user.invalid_phone_number = this._user.phone_number;
+		delete invalidatedUser._user.phone_number;
 
 		var $this = this;
-		UsersDB.addUserDocument(invalidatedUser, function(user) {
+		UsersDB.addUserDocument(invalidatedUser._user, function(user) {
 			if (!user) {
 				logger.error("invalidate error - couldn't add cloned invalidated user");
 				return;
