@@ -213,7 +213,7 @@ User.prototype = {
 		var $this = this;
 		this.invalidate(function(user, invalidId) {
 			if (!user) {
-				logger.error("reset registration failed - couldn't invalidate user:" + $this.toString());
+				logger.error("reset registration failed - couldn't invalidate user:".concat($this.toString(), " invalidId:" + invalidId));
 				return;
 			}
 
@@ -431,6 +431,7 @@ User.prototype = {
 
 	invalidate : function(callback) {
 		var invalidId = process.hrtime();
+		invalidId = invalidId[0] + "/" + invalidId[1];
 		UsersDB.modifyUser(this._user._id, false, null, { $set : { _id : invalidId, invalid_id : this._user._id,
 			state : States.INVALID, invalid_phone_number : this._user.phone_number }, $unset : { phone_number : "" } },
 			function(user) { callback(user, invalidId); });
