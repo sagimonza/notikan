@@ -129,7 +129,8 @@ var Users = {
 
 	addUserAndRegister : function(regId, callback) {
 		logger.debug("register-->adding user with regId:" + regId);
-		UsersDB.addUser(regId, uuid.v4(), function(user, token) {
+		var token = uuid.v4();
+		UsersDB.addUser(regId, token, function(user) {
 			if (user) {
 				user.askPushVerify(token);
 			} else {
@@ -499,7 +500,7 @@ var UsersDB = {
 	},
 
 	addUserDocument : function(doc, callback) {
-		this.addDocument(doc, function(err, result) { callback(!err && result && new User(result[0]), token); });
+		this.addDocument(doc, function(err, result) { callback(!err && result && new User(result[0])); });
 	},
 
 	modifyUser : function(regId, isOld, constraints, data, callback) {
