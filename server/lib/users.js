@@ -276,74 +276,60 @@ User.prototype = {
 			return;
 		}
 
-		var $this = this;
-		UsersDB.findUserWithNumber(data.phoneNumber, function(user) {
-			if (user)
-				user.handleRegisteredPhoneNumber($this._user._id, data.phoneNumber, data.overrideIfExist);
-			else
-				$this.askSMSVerifyUniqueNumber(data.phoneNumber); });
+		this.askSMSVerifyWithNumber(data.phoneNumber);
 	},
 
-	handleRegisteredPhoneNumber : function(newRegId, phoneNumber, overrideIfExist) {
+	handleRegisteredPhoneNumber : function(newRegId, phoneNumber, overrideIfExist, callback) {
 		if (!overrideIfExist) {
-			logger.debug("sms verification failed - phone number is already registered");
 			this.sendPhoneNumberUsedError(this._user.phone_number);
-			return;
+			return callback("sms verification failed - phone number is already registered");
 		}
 
 		logger.debug("sms verification continue with an already registered phone number");
 		this.invalidate(function(invalidatedUser) {
 			if (!invalidatedUser) {
-				logger.error("phone number registration failed - couldn't invalidate old user");
-				return;
+				return callback("phone number registration failed - couldn't invalidate old user");
 			}
 
 			UsersDB.modifyUser(newRegId, false, null, { $set : { appears_in_numbers : invalidatedUser.appears_in_numbers } }, function(user) {
 				if (!user) {
-					logger.error("sms verification failed - couldn't update new user");
-					return;
+					return callback("sms verification failed - couldn't update new user");
 				}
 
-				user.askSMSVerifyUniqueNumber(phoneNumber);
+				callback();
 			});
 		});
 	},
 
-	askSMSVerifyUniqueNumber : function(phoneNumber) {
-		UsersDB.findUser(this._user._id, function(origUser) {
-			if (!origUser) {
-				logger.error("sms verification failed - couldn't find user after phone validation");
+	askSMSVerifyWithNumber : function(phoneNumber) {
+		var $this = this;
+		var code = speakeasy.totp({ key : this._user.verification_token, step : config.users.codeStep });
+		UsersDB.modifyUser(this._user._id, false, null, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
+			if (!user) {
+				logger.debug("sms verification failed - update user failed:" + $this.toString());
 				return;
 			}
 
-			var code = speakeasy.totp({ key : origUser._user.verification_token, step : config.users.codeStep });
-			UsersDB.modifyUser(origUser._user._id, false, null, { $set : { verification_code : code, state : States.CODE_PENDING } }, function(user) {
-				if (!user) {
-					logger.debug("sms verification failed - update user failed:" + origUser.toString());
-					return;
-				}
+			SMS.send(phoneNumber,
+				"Your verification code is:".concat(code, ".\nPlease enter it to the 'Verification Code' input field and submit."),
+				function(smsFailed) {
+					if (!smsFailed) {
+						logger.debug("SMS was sent successfully to:" + phoneNumber + " for user:" + user.toString());
+						return;
+					}
 
-				SMS.send(phoneNumber,
-					"Your verification code is:".concat(code, ".\nPlease enter it to the 'Verification Code' input field and submit."),
-					function(smsFailed) {
-						if (!smsFailed) {
-							logger.debug("SMS was sent successfully to:" + phoneNumber + " for user:" + user.toString());
+					logger.debug("failed to send SMS to:" + phoneNumber + " for user:" + user.toString());
+					var modifyData = { $set : { state : States.PUSH_VERIFIED, sms_verify_tries : (user.sms_verify_tries || 0) + 1 },
+						$unset : { verification_code : "" } };
+					UsersDB.modifyUser(user._id, false, null, modifyData, function(pushVerifiedUser) {
+						if (!pushVerifiedUser) {
+							logger.debug("failed to notify user on phone number error:" + user.toString());
 							return;
 						}
 
-						logger.debug("failed to send SMS to:" + phoneNumber + " for user:" + user.toString());
-						var modifyData = { $set : { state : States.PUSH_VERIFIED, sms_verify_tries : (user.sms_verify_tries || 0) + 1 },
-							$unset : { verification_code : "" } };
-						UsersDB.modifyUser(user._id, false, null, modifyData, function(pushVerifiedUser) {
-							if (!pushVerifiedUser) {
-								logger.debug("failed to notify user on phone number error:" + user.toString());
-								return;
-							}
-
-							pushVerifiedUser.sendPhoneNumberInvalidError(phoneNumber);
-						});
+						pushVerifiedUser.sendPhoneNumberInvalidError(phoneNumber);
 					});
-			});
+				});
 		});
 	},
 
@@ -370,11 +356,39 @@ User.prototype = {
 	},
 
 	verifyCode : function(data) {
+		function updateUserVerified() {
+			UsersDB.modifyUser($this._user._id, false, null, { $set : { state : States.SMS_VERIFIED, phone_number : data.phoneNumber, last_response_ts : new Date() } }, function(user) {
+				if (user) {
+					user.sendSMSVerified();
+				} else {
+					// todo: send user 'reset' request?
+					logger.error("sms verification failed, couldn't mark as sms verified:" + $this.toString());
+				}
+			});
+		}
+
 		if (!this._user.verification_code || this._user.verification_code != data.code) {
 			logger.debug("sms verification failed - code mismatch, code exist:" + !!this._user.verification_code);
 			this.sendCodeError(data.code);
 			return;
 		}
+
+		var $this = this;
+		UsersDB.findUserWithNumber(data.phoneNumber, function(user) {
+			if (user) {
+				user.handleRegisteredPhoneNumber($this._user._id, data.phoneNumber, data.overrideIfExist, function(err) {
+					if (err) {
+						logger.debug("failed to handle registered phone number:" + err);
+						return;
+					}
+
+					updateUserVerified();
+				});
+			} else {
+				updateUserVerified();
+			}
+		});
+
 
 		var $this = this;
 		UsersDB.modifyUser(this._user._id, false, null, { $set : { state : States.SMS_VERIFIED, phone_number : data.phoneNumber, last_response_ts : new Date() } }, function(user) {
