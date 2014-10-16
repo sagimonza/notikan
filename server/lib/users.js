@@ -446,8 +446,8 @@ User.prototype = {
 				return;
 			}
 
-			UsersDB.deleteUser($this._user._id, function(user) {
-				callback(user && invalidatedUser); });
+			UsersDB.deleteUser($this._user._id, function(err) {
+				callback(!err && invalidatedUser); });
 		});
 	},
 
@@ -512,8 +512,7 @@ var UsersDB = {
 	},
 
 	deleteUser : function(regId, callback) {
-		this.collection.removeOne({ _id : regId }, { w : 1 }, function(err, result) {
-			callback(!err && result && new User(result)); });
+		this.collection.remove({ _id : regId }, { w : 1 }, function(err, result) { callback(err); });
 	},
 
 	addDocument : function(doc, callback) {
