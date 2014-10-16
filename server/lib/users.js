@@ -320,9 +320,9 @@ User.prototype = {
 					}
 
 					logger.debug("failed to send SMS to:" + phoneNumber + " for user:" + user.toString());
-					var modifyData = { $set : { state : States.PUSH_VERIFIED, sms_verify_tries : (user.sms_verify_tries || 0) + 1 },
+					var modifyData = { $set : { state : States.PUSH_VERIFIED, sms_verify_tries : (user._user.sms_verify_tries || 0) + 1 },
 						$unset : { verification_code : "" } };
-					UsersDB.modifyUser(user._id, false, null, modifyData, function(pushVerifiedUser) {
+					UsersDB.modifyUser(user._user._id, false, null, modifyData, function(pushVerifiedUser) {
 						if (!pushVerifiedUser) {
 							logger.debug("failed to notify user on phone number error:" + user.toString());
 							return;
