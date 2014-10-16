@@ -353,7 +353,7 @@ User.prototype = {
 	},
 
 	onCodeVerify : function(data) {
-		this.onRegistrationStep("sms verify", null, null, this.verifyCode, null, data);
+		this.onRegistrationStep("code verify", null, null, this.verifyCode, null, data);
 	},
 
 	verifyCode : function(data) {
@@ -387,17 +387,6 @@ User.prototype = {
 				});
 			} else {
 				updateUserVerified();
-			}
-		});
-
-
-		var $this = this;
-		UsersDB.modifyUser(this._user._id, false, null, { $set : { state : States.SMS_VERIFIED, phone_number : data.phoneNumber, last_response_ts : new Date() } }, function(user) {
-			if (user) {
-				user.sendSMSVerified();
-			} else {
-				// todo: send user 'reset' request?
-				logger.error("sms verification failed, couldn't mark as sms verified:" + $this.toString());
 			}
 		});
 	},
