@@ -506,13 +506,13 @@ var UsersDB = {
 	modifyUser : function(regId, isOld, constraints, data, callback) {
 		var queryObj = isOld ? { _oldId : regId } : { _id : regId };
 		if (constraints) queryObj = { $and : [queryObj, constraints] };
-		this.collection.findAndModify(queryObj, undefined, data, { "new" : true }, function(err, object) {
+		this.collection.findAndModify(queryObj, undefined, data, { w : 1, "new" : true }, function(err, object) {
 			logger.debug("modified user, err:" + err);
 			callback && callback(object && new User(object)); });
 	},
 
 	deleteUser : function(regId, callback) {
-		this.collection.findOneAndDelete({ _id : regId }, null, function(err, result) {
+		this.collection.removeOne({ _id : regId }, { w : 1 }, function(err, result) {
 			callback(!err && result && new User(result)); });
 	},
 
