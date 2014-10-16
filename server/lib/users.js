@@ -515,7 +515,7 @@ var UsersDB = {
 			callback(!err && result && new User(result)); });
 	},
 
-	addDocument : function(doc) {
+	addDocument : function(doc, callback) {
 		this.collection.insert(doc, { w : 1 }, function(err, result) { callback(err, result); });
 	},
 
