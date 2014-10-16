@@ -129,7 +129,7 @@ var Users = {
 
 	addUserAndRegister : function(regId, callback) {
 		logger.debug("register-->adding user with regId:" + regId);
-		UsersDB.addUser(regId, function(user, token) {
+		UsersDB.addUser(regId, uuid.v4(), function(user, token) {
 			if (user) {
 				user.askPushVerify(token);
 			} else {
@@ -430,11 +430,24 @@ User.prototype = {
 	},
 
 	invalidate : function(callback) {
-		var invalidId = process.hrtime();
-		invalidId = invalidId[0] + "/" + invalidId[1];
-		UsersDB.modifyUser(this._user._id, false, null, { $set : { _id : invalidId, invalid_id : this._user._id,
-			state : States.INVALID, invalid_phone_number : this._user.phone_number }, $unset : { phone_number : "" } },
-			function(user) { callback(user, invalidId); });
+		var invalidatedUser = this.clone(), invalidId = process.hrtime();;
+
+		invalidatedUser._id = invalidId[0] + "/" + invalidId[1];
+		invalidatedUser.invalid_id = this._user._id;
+		invalidatedUser.state = States.INVALID;
+		invalidatedUser.invalid_phone_number = this._user.phone_number;
+		delete invalidatedUser.phone_number;
+
+		var $this = this;
+		UsersDB.addUserDocument(invalidatedUser, function(user) {
+			if (!user) {
+				logger.error("invalidate error - couldn't add cloned invalidated user");
+				return;
+			}
+
+			UsersDB.deleteUser($this._user._id, function(user) {
+				callback(user && invalidatedUser); });
+		});
 	},
 
 	verifyChallenge : function(data) {
@@ -454,6 +467,12 @@ User.prototype = {
 		return this._user._id;
 	},
 
+	clone : function() {
+		var clonedUser = {};
+		Object.keys(this._user).forEach(function(entry) { clonedUser[entry] = this[entry]; }, this._user);
+		return new User(clonedUser);
+	},
+
 	_user : null
 };
 
@@ -468,19 +487,19 @@ var UsersDB = {
 			callback(user && new User(user)); });
 	},
 
-	addUser : function(regId, callback) {
-		var token = uuid.v4();
+	addUser : function(regId, token, callback) {
 		// todo: check unique token
-		this.collection.insert(
-			{	_id 				: regId,
-				type				: "user",
-				state				: States.UNVERIFIED,
-				verification_token	: token,
-				last_response_ts	: new Date()
-			},
-			{ w : 1 },
-			function(err, result) {
-				callback(!err && result && new User(result[0]), token); });
+		this.addUserDocument({
+			_id 				: regId,
+			type				: "user",
+			state				: States.UNVERIFIED,
+			verification_token	: token,
+			last_response_ts	: new Date()
+		}, callback);
+	},
+
+	addUserDocument : function(doc, callback) {
+		this.addDocument(doc, function(err, result) { callback(!err && result && new User(result[0]), token); });
 	},
 
 	modifyUser : function(regId, isOld, constraints, data, callback) {
@@ -494,6 +513,10 @@ var UsersDB = {
 	deleteUser : function(regId, callback) {
 		this.collection.findOneAndDelete({ _id : regId }, null, function(err, result) {
 			callback(!err && result && new User(result)); });
+	},
+
+	addDocument : function(doc) {
+		this.collection.insert(doc, { w : 1 }, function(err, result) { callback(err, result); });
 	},
 
 	collection : null
