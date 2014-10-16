@@ -280,9 +280,9 @@ User.prototype = {
 		this.askSMSVerifyWithNumber(data.phoneNumber);
 	},
 
-	handleRegisteredPhoneNumber : function(newUser, phoneNumber, overrideIfExist, callback) {
+	handleRegisteredPhoneNumber : function(newUser, phoneNumber, code, overrideIfExist, callback) {
 		if (!overrideIfExist) {
-			newUser.sendPhoneNumberUsedError(this._user.phone_number);
+			newUser.sendPhoneNumberUsedError(this._user.phone_number, code);
 			return callback("sms verification failed - phone number is already registered");
 		}
 
@@ -334,12 +334,14 @@ User.prototype = {
 		});
 	},
 
-	sendPhoneNumberUsedError : function(phoneNumber) {
+	sendPhoneNumberUsedError : function(phoneNumber, code) {
 		GCM.notify([this._user._id],
 			{	"message"			: "You've entered a phone number that is already registered '".concat(phoneNumber, "'. Tap here and let us know how to continue"),
 				"title"				: "Verification Failed - Already Registered Phone Number",
 				"msgType"			: MessageTypes.USED_NUMBER,
-				"regId"				: this._user._id
+				"regId"				: this._user._id,
+				"phoneNumber"		: phoneNumber,
+				"verificationCode"	: code
 			}, { "collapseKey"		: "Verification Failed" });
 	},
 
@@ -377,7 +379,7 @@ User.prototype = {
 		var $this = this;
 		UsersDB.findUserWithNumber(data.phoneNumber, function(user) {
 			if (user) {
-				user.handleRegisteredPhoneNumber($this, data.phoneNumber, data.overrideIfExist, function(err) {
+				user.handleRegisteredPhoneNumber($this, data.phoneNumber, data.code, data.overrideIfExist, function(err) {
 					if (err) {
 						logger.debug("failed to handle registered phone number:" + err);
 						return;
