@@ -20,7 +20,7 @@ var Geo = {
 		geocoder.reverse(lat, long, function(err, res) {
 			logger.debug("get country code for:".concat(lat, ",", long, " res:", res, " err:", err));
 			try { logger.debug("geocoder reverse result:" + (res && JSON.stringify(res))); } catch(ex) {}
-			callback(!err && res && res.countryCode);
+			callback(!err && res && res[0].countryCode);
 		});
 	}
 };
