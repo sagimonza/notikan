@@ -7,6 +7,7 @@ var config			= require('./config.js');
 var DB				= require('./db.js');
 var GCM				= require('./gcm.js');
 var SMS				= require('./sms.js');
+var Geo				= require('./geo.js');
 
 var logger = LoggerFactory.createLogger("users");
 
@@ -45,13 +46,13 @@ var Users = {
 		UsersDB.findUser(data.regId, function(user) {
 			if (user) {
 				if (data.forceReset)
-					user.resetRegistration();
+					user.resetRegistration(data.coords);
 				else
 					logger.debug("ignoring register request for existing user without 'forceReset' flag");
 			} else if (data && data.oldRegId) {
 				Users._handleOldUserRegister(data.oldRegId, data.regId, data);
 			} else {
-				Users.addUserAndRegister(data.regId);
+				Users.addUserAndRegister(data.regId, data.coords);
 			}
 		});
 	},
@@ -127,16 +128,19 @@ var Users = {
 		});
 	},
 
-	addUserAndRegister : function(regId, callback) {
-		logger.debug("register-->adding user with regId:" + regId);
-		var token = uuid.v4();
-		UsersDB.addUser(regId, token, function(user) {
-			if (user) {
-				user.askPushVerify(token);
-			} else {
-				logger.error("user registration failed - couldn't add user with regId:" + regId);
-			}
-			callback && callback(user);
+	addUserAndRegister : function(regId, coords, callback) {
+		logger.debug("register-->adding user with regId:" + regId + " coords:" + coords);
+		coords = coords || {};
+		Geo.getCountryCode(coords.lat, coords.long, function(countryCode) {
+			var token = uuid.v4();
+			UsersDB.addUser(regId, token, function(user) {
+				if (user) {
+					user.askPushVerify(token, countryCode);
+				} else {
+					logger.error("user registration failed - couldn't add user with regId:" + regId);
+				}
+				callback && callback(user);
+			});
 		});
 	},
 
@@ -171,7 +175,7 @@ var Users = {
 			}
 
 			logger.debug("old user doesn't exist or unverified, thus need to verify all over again - adding new user");
-			Users.addUserAndRegister(regId);
+			Users.addUserAndRegister(regId, data.coords);
 		});
 	},
 
@@ -210,7 +214,7 @@ User.prototype = {
 		}
 	},
 
-	resetRegistration : function() {
+	resetRegistration : function(coords) {
 		var $this = this;
 		this.invalidate(function(user, invalidId) {
 			if (!user) {
@@ -218,19 +222,20 @@ User.prototype = {
 				return;
 			}
 
-			Users.addUserAndRegister($this._user._id, function(addedUser) {
+			Users.addUserAndRegister($this._user._id, coords, function(addedUser) {
 				if (!addedUser) logger.error("reset registration failed - couldn't add user:" + $this.toString()); });
 		});
 	},
 
-	askPushVerify : function(token) {
+	askPushVerify : function(token, countryCode) {
 		logger.debug("asking to push verify user:" + this.toString());
 		GCM.notify([this._user._id],
 			{	"message"			: "To start verifying this device please tap here",
 				"title"				: "Verification Step One",
 				"msgType"			: MessageTypes.PUSH_VERIFICATION,
 				"regId"				: this._user._id,
-				"verificationToken"	: token
+				"verificationToken"	: token,
+				"countryCode"		: countryCode
 			}, { "collapseKey"		: "Pending Verification" });
 	},
 
